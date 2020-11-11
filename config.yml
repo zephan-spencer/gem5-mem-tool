@@ -1,0 +1,52 @@
+---
+acc_cluster:
+  - Name: Head
+  - DMA:
+    - Name: ClusterDMA
+    - Size: 512
+  - Accelerator:
+    - Name: Top
+    - Connection: ClusterDMA
+  - Accelerator:
+    - Name: GEMM1
+    - Connection: Top
+    - Vars:
+      - Matrix0:
+        - Name: Matrix0
+        - Size: 2048
+        - Type: SPM
+      - Matrix1:
+        - Name: Matrix0
+        - Size: 2048
+        - Type: SPM
+      - Matrix2:
+        - Name: Matrix0
+        - Size: 2048
+        - Type: SPM
+# ---
+# acc_cluster:
+#   - Name: SecondGEMM
+#   - Accelerator:
+#     - Name: GEMM1
+#     - Vars:
+#       - Matrix0:
+#         - Size: 2048
+#         - Type: SPM
+#       - Matrix1:
+#         - Size: 2048
+#         - Type: SPM
+#       - Matrix2:
+#         - Size: 2048
+#         - Type: SPM
+  # - Accelerator:
+  #   - Name: GEMM2
+  #   - Vars:
+  #     - Matrix0:
+  #       - Size: 2048
+  #       - Type: SPM
+  #     - Matrix1:
+  #       - Size: 2048
+  #       - Type: SPM
+  #     - Matrix2:
+  #       - Size: 2048
+  #       - Type: SPM
