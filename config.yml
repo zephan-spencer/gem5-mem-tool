@@ -1,43 +1,58 @@
 ---
 acc_cluster:
-  - Name: Head
+  - Name: SystemValCluster
   - DMA:
     - Name: ClusterDMA
-    - Size: 512
+      Size: 512
+      Type: NonCoherent
+  - DMA:
+    - Name: StreamDMA0
+      Size: 512
+      Type: Stream
   - Accelerator:
-    - Name: Top
-    - Connection: ClusterDMA
+    - Name: top
+      PIO: 32
+      Bus: Local
   - Accelerator:
-    - Name: GEMM1
-    - Connection: Top
-    - Vars:
-      - Matrix0:
-        - Name: Matrix0
-        - Size: 2048
-        - Type: SPM
-      - Matrix1:
-        - Name: Matrix0
-        - Size: 2048
-        - Type: SPM
-      - Matrix2:
-        - Name: Matrix0
-        - Size: 2048
-        - Type: SPM
-# ---
-# acc_cluster:
-#   - Name: SecondGEMM
-#   - Accelerator:
-#     - Name: GEMM1
-#     - Vars:
-#       - Matrix0:
-#         - Size: 2048
-#         - Type: SPM
-#       - Matrix1:
-#         - Size: 2048
-#         - Type: SPM
-#       - Matrix2:
-#         - Size: 2048
-#         - Type: SPM
+    - Name: bench
+      PIO: 32
+      LocalPorts: top
+      ResetSPM: T
+    - Var:
+      - Name: Matrix0
+        Type: SPM
+        Size: 2048
+        Ports: 2
+    - Var:
+      - Name: Matrix1
+        Type: SPM
+        Size: 2048
+        Ports: 2
+    - Var:
+      - Name: Matrix2
+        Type: SPM
+        Size: 2048
+        Ports: 2
+    # - Var:
+    #   - Name: Matrix2
+    #     Type: Stream
+    #     DMA: StreamDMA0
+    #     StreamSize: 1
+    #     BufferSize: 8
+    #     Direction: Out
+---
+acc_cluster:
+  - Name: SecondGEMM
+  - Accelerator:
+    - Name: GEMM2
+      PIO: 32
+      Bus: Local
+    - Var:
+      - Name: Matrix0
+        Type: SPM
+        Size: 2048
+        Ports: 2
+
   # - Accelerator:
   #   - Name: GEMM2
   #   - Vars:
@@ -50,3 +65,5 @@ acc_cluster:
   #     - Matrix2:
   #       - Size: 2048
   #       - Type: SPM
+  # For Comminterface Local, ACP, Stream, SPM, PIO
+  # All can have multiple connections
