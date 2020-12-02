@@ -1,8 +1,8 @@
 ---
 acc_cluster:
-  - Name: SystemVal
+  - Name: SysVal
   - DMA:
-    - Name: ClusterDMA
+    - Name: DMA
       Size: 128
       MaxReq: 4
       Type: NonCoherent
@@ -38,18 +38,18 @@ acc_cluster:
         Type: SPM
         Size: 2048
         Ports: 2
-# ---
-# acc_cluster:
-#   - Name: SecondGEMM
-#   - Accelerator:
-#     - Name: GEMM2
-#       PIO: 32
-#       Bus: Local
-#     - Var:
-#       - Name: Matrix0
-#         Type: SPM
-#         Size: 2048
-#         Ports: 2
+---
+acc_cluster:
+  - Name: SecondGEMM
+  - Accelerator:
+    - Name: GEMM2
+      PIO: 32
+      Bus: Local
+    - Var:
+      - Name: Matrix0
+        Type: SPM
+        Size: 2048
+        Ports: 2
 
   # - Accelerator:
   #   - Name: GEMM2

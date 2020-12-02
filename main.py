@@ -57,5 +57,9 @@ with open("test.py", 'w') as f:
 		for j in i.dmas:
 			for k in j.genConfig(i.name.lower()):
 				f.write("	" + k + "\n")
+	f.write("def makeHWAcc(options, system):\n\n")
+	for i in clusters:
+		f.write("	system." + i.name.lower() + " = AccCluster()" + "\n")
+		f.write("	build" + i.name + "(options, system, system." + i.name.lower() + ")\n\n")
 # if(topAddress>maxAddress):
 #     print("WARNING: Address range is greater than defined for gem5")
