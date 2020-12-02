@@ -1,23 +1,28 @@
 ---
 acc_cluster:
-  - Name: SystemValCluster
+  - Name: SystemVal
   - DMA:
     - Name: ClusterDMA
-      Size: 512
+      Size: 128
+      MaxReq: 4
       Type: NonCoherent
-  - DMA:
-    - Name: StreamDMA0
-      Size: 512
-      Type: Stream
+      InterruptNum: 123
+  # - DMA:
+  #   - Name: StreamDMA0
+  #     Size: 512
+  #     Type: Stream
+  #     InterruptNum: 124
   - Accelerator:
     - Name: top
       PIO: 32
       Bus: Local
+      # Interrupt: 97 Need to Implement?
   - Accelerator:
     - Name: bench
       PIO: 32
       LocalPorts: top
-      ResetSPM: T
+      ResetSPM: True
+      # Interrupt: 98 Need to implement? 
     - Var:
       - Name: Matrix0
         Type: SPM
@@ -33,25 +38,18 @@ acc_cluster:
         Type: SPM
         Size: 2048
         Ports: 2
-    # - Var:
-    #   - Name: Matrix2
-    #     Type: Stream
-    #     DMA: StreamDMA0
-    #     StreamSize: 1
-    #     BufferSize: 8
-    #     Direction: Out
----
-acc_cluster:
-  - Name: SecondGEMM
-  - Accelerator:
-    - Name: GEMM2
-      PIO: 32
-      Bus: Local
-    - Var:
-      - Name: Matrix0
-        Type: SPM
-        Size: 2048
-        Ports: 2
+# ---
+# acc_cluster:
+#   - Name: SecondGEMM
+#   - Accelerator:
+#     - Name: GEMM2
+#       PIO: 32
+#       Bus: Local
+#     - Var:
+#       - Name: Matrix0
+#         Type: SPM
+#         Size: 2048
+#         Ports: 2
 
   # - Accelerator:
   #   - Name: GEMM2

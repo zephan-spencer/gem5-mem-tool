@@ -3,7 +3,7 @@ import os
 import textwrap
 from parser import *
 
-imports = "import m5\nfrom m5.objects import *\nfrom m5.util import *\nimport ConfigParser\nfrom HWAccConfig import *\n"
+imports = "import m5\nfrom m5.objects import *\nfrom m5.util import *\nimport ConfigParser\nfrom HWAccConfig import *\n\n"
 
 stream = open(r'config.yml')
 
@@ -39,7 +39,7 @@ print('Cluster 0 Base Address: 0x{0:08X}'.format(clusters[0].clusterBaseAddress)
 print('Cluster 0 Top Address: 0x{0:08X}'.format(clusters[0].clusterTopAddress))
 # print('Matrix 0 Address: 0x{0:08X}'.format(clusters[0].accs[1].variables[0].address))
 
-print('Cluster 1 Base Address: 0x{0:08X}'.format(clusters[1].clusterBaseAddress))
+# print('Cluster 1 Base Address: 0x{0:08X}'.format(clusters[1].clusterBaseAddress))
 # print('Cluster 1: 0x{0:08X}'.format(clusters[1].clusterTopAddress))
 # print('Matrix 1 Address: 0x{0:08X}'.format(clusters[1].accs[0].variables[0].address))
 # filepath = os.getcwd()
@@ -48,12 +48,14 @@ print('Cluster 1 Base Address: 0x{0:08X}'.format(clusters[1].clusterBaseAddress)
 with open("test.py", 'w') as f:
 	f.write(imports)
 	for i in clusters:
-		f.write("def build" + i.name + "(options, system, clstr):" + "\n")
+		for j in i.genConfig():
+			f.write(j + "\n")
 		#Add cluster definitions here
 		for j in i.accs:
 			for k in j.genConfig(i.name.lower()):
 				f.write("	" + k + "\n")
-			f.write("\n")
-
+		for j in i.dmas:
+			for k in j.genConfig(i.name.lower()):
+				f.write("	" + k + "\n")
 # if(topAddress>maxAddress):
 #     print("WARNING: Address range is greater than defined for gem5")
