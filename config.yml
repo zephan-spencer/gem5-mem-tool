@@ -30,16 +30,16 @@ acc_cluster:
         Type: SPM
         Size: 2048
         Ports: 2
-    # - Var:
-    #   - Name: Matrix1
-    #     Type: SPM
-    #     Size: 2048
-    #     Ports: 2
-    # - Var:
-    #   - Name: Matrix2
-    #     Type: SPM
-    #     Size: 2048
-    #     Ports: 2
+    - Var:
+      - Name: Matrix1
+        Type: SPM
+        Size: 2048
+        Ports: 2
+    - Var:
+      - Name: Matrix2
+        Type: SPM
+        Size: 2048
+        Ports: 2
     - Var:
       - Name: Matrix3
         Type: Stream
@@ -47,18 +47,18 @@ acc_cluster:
         BufferSize: 8
         InCon: top
         OutCon: bench
-# ---
-# acc_cluster:
-#   - Name: SecondGEMM
-#   - Accelerator:
-#     - Name: GEMM2
-#       PIO: 32
-#       Bus: Local
-#     - Var:
-#       - Name: Matrix0
-#         Type: SPM
-#         Size: 2048
-#         Ports: 2
+---
+acc_cluster:
+  - Name: SecondGEMM
+  - Accelerator:
+    - Name: GEMM2
+      PIO: 32
+      Bus: Local
+    - Var:
+      - Name: Matrix0
+        Type: SPM
+        Size: 2048
+        Ports: 2
 
   # - Accelerator:
   #   - Name: GEMM2

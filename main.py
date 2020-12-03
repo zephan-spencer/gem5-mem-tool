@@ -25,7 +25,7 @@ for section in config:
 		for i in v:
 			if "Name" in i:
 				clusterName = i['Name']
-				print("Adding Cluster: " + clusterName)
+				# print("Adding Cluster: " + clusterName)
 			if "DMA" in i:
 				dmas.append(i)
 			if "Accelerator" in i:
@@ -64,12 +64,15 @@ with open("test.py", 'w') as f:
 		f.write("	build" + i.name + "(options, system, system." + i.name.lower() + ")\n\n")
 
 # Write out header
-for i in clusters:
-	for j in i.dmas:
-		print(j.name)
-	for j in i.accs:
-		print(j.name)
-		for k in j.variables:
-			print(k.name)
+with open("test.h", 'w') as f:
+	for i in clusters:
+		f.write("//Cluster: " + j.name.upper() + "\n")
+		for j in i.dmas:
+			f.write("#define " + j.name.upper() + " " + hex(j.address) + "\n")
+		for j in i.accs:
+			f.write("//Accelerator: " + j.name.upper() + "\n")
+			f.write("#define " + j.name.upper() + " " + hex(j.address) + "\n")
+			for k in j.variables:
+				f.write("#define " + k.name.upper() + " " + hex(k.address) + "\n")
 # if(topAddress>maxAddress):
 #     print("WARNING: Address range is greater than defined for gem5")
