@@ -27,11 +27,10 @@ for section in config:
 				clusterName = i['Name']
 				print("Adding Cluster: " + clusterName)
 			if "DMA" in i:
-				# print("Found a DMA")
 				dmas.append(i)
 			if "Accelerator" in i:
-				# print("Found an Accelerator")
 				accs.append(i)
+
 	clusters.append(AccCluster(clusterName, dmas, accs, baseAddress))
 	baseAddress = clusters[-1].clusterTopAddress + 1
 
@@ -45,21 +44,32 @@ print('Cluster 0 Top Address: 0x{0:08X}'.format(clusters[0].clusterTopAddress))
 # filepath = os.getcwd()
 
 # Write out the file
+
+# Write out config file
 with open("test.py", 'w') as f:
 	f.write(imports)
 	for i in clusters:
 		for j in i.genConfig():
 			f.write(j + "\n")
 		#Add cluster definitions here
-		for j in i.accs:
-			for k in j.genConfig(i.name.lower()):
-				f.write("	" + k + "\n")
 		for j in i.dmas:
-			for k in j.genConfig(i.name.lower()):
+			for k in j.genConfig():
+				f.write("	" + k + "\n")
+		for j in i.accs:
+			for k in j.genConfig():
 				f.write("	" + k + "\n")
 	f.write("def makeHWAcc(options, system):\n\n")
 	for i in clusters:
 		f.write("	system." + i.name.lower() + " = AccCluster()" + "\n")
 		f.write("	build" + i.name + "(options, system, system." + i.name.lower() + ")\n\n")
+
+# Write out header
+for i in clusters:
+	for j in i.dmas:
+		print(j.name)
+	for j in i.accs:
+		print(j.name)
+		for k in j.variables:
+			print(k.name)
 # if(topAddress>maxAddress):
 #     print("WARNING: Address range is greater than defined for gem5")
