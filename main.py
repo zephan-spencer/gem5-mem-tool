@@ -34,16 +34,14 @@ for section in config:
 	clusters.append(AccCluster(clusterName, dmas, accs, baseAddress))
 	baseAddress = clusters[-1].clusterTopAddress + 1
 
-print('Cluster 0 Base Address: 0x{0:08X}'.format(clusters[0].clusterBaseAddress))
-print('Cluster 0 Top Address: 0x{0:08X}'.format(clusters[0].clusterTopAddress))
+# print('Cluster 0 Base Address: 0x{0:08X}'.format(clusters[0].clusterBaseAddress))
+# print('Cluster 0 Top Address: 0x{0:08X}'.format(clusters[0].clusterTopAddress))
 # print('Matrix 0 Address: 0x{0:08X}'.format(clusters[0].accs[1].variables[0].address))
 
 # print('Cluster 1 Base Address: 0x{0:08X}'.format(clusters[1].clusterBaseAddress))
 # print('Cluster 1: 0x{0:08X}'.format(clusters[1].clusterTopAddress))
 # print('Matrix 1 Address: 0x{0:08X}'.format(clusters[1].accs[0].variables[0].address))
 # filepath = os.getcwd()
-
-# Write out the file
 
 # Write out config file
 with open("test.py", 'w') as f:

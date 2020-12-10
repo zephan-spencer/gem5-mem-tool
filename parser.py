@@ -34,11 +34,17 @@ class AccCluster:
 			variables = []
 			streamVariables = []
 			pioAddress = None
+			IrPath = None
+			configPath = None
 
 			for i in acc['Accelerator']:
 				if 'PIO' in i:
 					pioAddress = topAddress
 					topAddress = topAddress + i['PIO']
+				if 'IrPath' in i:
+					IrPath = i['IrPath']
+				if 'ConfigPath' in i:
+					configPath = i['ConfigPath']
 				if 'Name' in i:
 					name = i['Name']
 				if 'PIOMaster' in i:
@@ -56,7 +62,7 @@ class AccCluster:
 								int(j['StreamSize']), j['BufferSize'],  topAddress))
 							topAddress = topAddress + int(j['StreamSize'])
 			accClass.append(Accelerator(name, pioMasters, busConnections,
-				pioAddress, variables, streamVariables))
+				pioAddress, configPath , IrPath, variables, streamVariables))
 
 		self.accs = accClass
 		self.dmas = dmaClass
@@ -67,11 +73,11 @@ class AccCluster:
 		# Need to add some customization here. Consider this a placeholder
 		# Also need to edit AccCluster.py's addresses to match the gem5 supported ones
 		lines.append("def build" + self.name + "(options, system, clstr):" + "\n")
-		lines.append("	hw_path = options.accpath + \"/\" + options.accbench + \"/hw/\"")
 		lines.append("	local_low = " + hex(self.clusterBaseAddress))
 		lines.append("	local_high = " + hex(self.clusterTopAddress))
+		lines.append("	local_range = AddrRange(local_low, local_high)")
 		lines.append("	external_range = [AddrRange(0x00000000, local_low-1), AddrRange(local_high+1, 0xFFFFFFFF)]")
-		lines.append("	clstr._attach_bridges(system, local_range, external_range)")
+		lines.append("	system.iobus.master = clstr.local_bus.slave")
 		# Need to define l2coherency in the YAML file?
 		lines.append("	clstr._connect_caches(system, options, l2coherent=False)")
 		lines.append("	gic = system.realview.gic")
@@ -81,21 +87,23 @@ class AccCluster:
 
 class Accelerator:
 
-	def __init__(self, name, pioMasters, busConnections, address, variables = None, streamVariables = None):
+	def __init__(self, name, pioMasters, busConnections, address, configPath, irPath, variables = None, streamVariables = None):
 		self.name = name.lower()
 		self.pioMasters = pioMasters
 		self.busConnections = busConnections
 		self.address = address
 		self.variables = variables
 		self.streamVariables = streamVariables
+		self.configPath = configPath
+		self.irPath = irPath
 
 	def genConfig(self):
 		lines = []
 		lines.append("# Accelerator")
-		lines.append("acc = " + self.name)
+		lines.append("acc = " + "\"" + self.name + "\"")
 		# Need to add a user defined path & user defined interrupts here
-		lines.append("config = hw_path + acc + \".ini\"")
-		lines.append("ir = hw_path + acc + \".ll\"")
+		lines.append("config = " + "\"" + self.configPath + "\"")
+		lines.append("ir = "  + "\"" + self.irPath + "\"")
 		lines.append("clstr." + self.name +" = CommInterface(devicename=acc, gic=gic)")
 		lines.append("AccConfig(clstr." + self.name + ", config, ir)")
 
@@ -115,6 +123,8 @@ class Accelerator:
 		# Add scratchpad variables
 		for i in self.variables:
 			lines = i.genConfig(lines)
+			lines.append("	clstr." + self.name + ".spm = " + "clstr." + i.name + ".spm_ports")
+			lines.append("")
 
 		# Add stream variables
 		for i in self.streamVariables:
@@ -168,7 +178,7 @@ class Dma:
 		systemPath = "clstr."
 		# Is pio size always 21
 		lines.append("# Noncoherent DMA")
-		lines.append(dmaPath + "NoncoherentDma(pio_addr="
+		lines.append("clstr." + self.name + " = NoncoherentDma(pio_addr="
 			+ hex(self.address) + ", pio_size = " + "21" + ", gic=gic, int_num=" + str(self.int_num) +")")
 		lines.append(dmaPath + "cluster_dma = " + systemPath + "local_bus.slave")
 		lines.append(dmaPath + "max_req_size = " + str(self.MaxReq))
@@ -217,6 +227,6 @@ class Variable:
 		lines.append("clstr." + self.name + "." + "conf_table_reported = False")
 		lines.append("clstr." + self.name + "." + "ready_mode = True")
 		lines.append("clstr." + self.name + "." + "port" + " = " + "clstr.local_bus.master")
-		lines.append("")
+		lines.append("for i in range(" + str(self.ports) + "):")
 
 		return lines

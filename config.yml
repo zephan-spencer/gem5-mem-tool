@@ -8,21 +8,24 @@ acc_cluster:
       MaxReq: 4
       Type: NonCoherent
       InterruptNum: 123
-  - DMA:
-    - Name: StreamDMA0
-      PIO: 32
-      Size: 8
-      Type: Stream
-      ReadInt: 124
-      WriteInt: 125
+  # - DMA:
+  #   - Name: StreamDMA0
+  #     PIO: 32
+  #     Size: 8
+  #     Type: Stream
+  #     ReadInt: 124
+  #     WriteInt: 125
   - Accelerator:
     - Name: top
-    # Need to add config and IR configurations here
+      IrPath: /home/he-man/gem5-SALAM/benchmarks/sys_validation/gemm/hw/top.ll
+      ConfigPath: /home/he-man/gem5-SALAM/benchmarks/sys_validation/gemm/hw/top.ini
       PIO: 32
       Bus: Local
       # Interrupt: 97 Need to Implement?
   - Accelerator:
-    - Name: bench
+    - Name: gemm
+      IrPath: /home/he-man/gem5-SALAM/benchmarks/sys_validation/gemm/hw/gemm.ll
+      ConfigPath: /home/he-man/gem5-SALAM/benchmarks/sys_validation/gemm/hw/gemm.ini
       PIO: 32
       PIOMaster: top
       ResetSPM: True
@@ -42,25 +45,25 @@ acc_cluster:
         Type: SPM
         Size: 2048
         Ports: 2
-    - Var:
-      - Name: Matrix3
-        Type: Stream
-        StreamSize: 1
-        BufferSize: 8
-        InCon: top
-        OutCon: bench
----
-acc_cluster:
-  - Name: SecondGEMM
-  - Accelerator:
-    - Name: GEMM2
-      PIO: 32
-      Bus: Local
-    - Var:
-      - Name: Matrix0
-        Type: SPM
-        Size: 2048
-        Ports: 2
+    # - Var:
+    #   - Name: Matrix3
+    #     Type: Stream
+    #     StreamSize: 1
+    #     BufferSize: 8
+    #     InCon: top
+    #     OutCon: bench
+# ---
+# acc_cluster:
+#   - Name: SecondGEMM
+#   - Accelerator:
+#     - Name: GEMM2
+#       PIO: 32
+#       Bus: Local
+#     - Var:
+#       - Name: Matrix0
+#         Type: SPM
+#         Size: 2048
+#         Ports: 2
 
   # - Accelerator:
   #   - Name: GEMM2
