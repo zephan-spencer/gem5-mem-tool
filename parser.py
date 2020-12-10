@@ -19,10 +19,10 @@ class AccCluster:
 			for i in dma['DMA']:
 				# Decide whether the DMA is NonCoherent or Stream
 				if 'NonCoherent' in i['Type'] :
-					dmaClass.append(Dma(i['Name'], topAddress, i['InterruptNum'], i['Size'], i['MaxReq']))
+					dmaClass.append(Dma(i['Name'], topAddress, i['Type'], i['InterruptNum'], i['Size'], i['MaxReq']))
 					topAddress = topAddress + int(i['Size'])
 				elif 'Stream' in i['Type']:
-					dmaClass.append(StreamDma(i['Name'], i['PIO'], topAddress, i['ReadInt'], i['WriteInt'], i['Size']))
+					dmaClass.append(StreamDma(i['Name'], i['PIO'], topAddress, i['Type'], i['ReadInt'], i['WriteInt'], i['Size']))
 					topAddress = topAddress + int(i['Size'])
 
 		# Parse Accelerators
@@ -125,11 +125,12 @@ class Accelerator:
 # Need to add a Stream DMA Class
 
 class StreamDma:
-	def __init__(self, name, pio, address, rd_int = None, wr_int = None, size = 64):
+	def __init__(self, name, pio, address, dmaType, rd_int = None, wr_int = None, size = 64):
 		self.name = name.lower()
 		self.pio = pio
 		self.size = size
 		self.address = address
+		self.dmaType = dmaType
 		self.rd_int = rd_int
 		self.wr_int = wr_int
 	# Probably could apply the style used here in other genConfigs
@@ -153,10 +154,11 @@ class StreamDma:
 
 
 class Dma:
-	def __init__(self, name, address, int_num = None, size = 64, MaxReq = 4):
+	def __init__(self, name, address, dmaType, int_num = None, size = 64, MaxReq = 4):
 		self.name = name.lower()
 		self.size = size
 		self.address = address
+		self.dmaType = dmaType
 		self.int_num = int_num
 		self.MaxReq = MaxReq
 	# Probably could apply the style used here in other genConfigs

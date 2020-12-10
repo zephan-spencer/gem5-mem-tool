@@ -68,7 +68,23 @@ with open("test.h", 'w') as f:
 	for i in clusters:
 		f.write("//Cluster: " + j.name.upper() + "\n")
 		for j in i.dmas:
-			f.write("#define " + j.name.upper() + " " + hex(j.address) + "\n")
+			if j.dmaType == "NonCoherent":
+				f.write("//" + j.dmaType + "DMA" + "\n")
+				f.write("#define " + j.name.upper() + "_Flags " + hex(j.address) + "\n")
+				f.write("#define " + j.name.upper() + "_RdAddr " + hex(j.address + 1) + "\n")
+				f.write("#define " + j.name.upper() + "_WrAddr " + hex(j.address + 9) + "\n")
+				f.write("#define " + j.name.upper() + "_CopyLen " + hex(j.address + 17) + "\n")
+			elif j.dmaType == "Stream":
+				f.write("//" + j.dmaType + "DMA" + "\n")
+				f.write("#define " + j.name.upper() + "_Flags " + hex(j.address) + "\n")
+				f.write("#define " + j.name.upper() + "_RdAddr " + hex(j.address + 4) + "\n")
+				f.write("#define " + j.name.upper() + "_WrAddr " + hex(j.address + 12) + "\n")
+				f.write("#define " + j.name.upper() + "_RdFrameSize " + hex(j.address + 20) + "\n")
+				f.write("#define " + j.name.upper() + "_NumRdFrames " + hex(j.address + 24) + "\n")
+				f.write("#define " + j.name.upper() + "_RdFrameBufSize " + hex(j.address + 25) + "\n")
+				f.write("#define " + j.name.upper() + "_WrFrameSize " + hex(j.address + 26) + "\n")
+				f.write("#define " + j.name.upper() + "_NumWrFrames " + hex(j.address + 30) + "\n")
+				f.write("#define " + j.name.upper() + "_WrFrameBufSize " + hex(j.address + 31) + "\n")
 		for j in i.accs:
 			f.write("//Accelerator: " + j.name.upper() + "\n")
 			f.write("#define " + j.name.upper() + " " + hex(j.address) + "\n")

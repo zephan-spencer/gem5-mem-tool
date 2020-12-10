@@ -1,8 +1,9 @@
 ---
 acc_cluster:
   - Name: SysVal
+  # Need to add Path
   - DMA:
-    - Name: DMA
+    - Name: ClusterDMA
       Size: 128
       MaxReq: 4
       Type: NonCoherent
@@ -16,6 +17,7 @@ acc_cluster:
       WriteInt: 125
   - Accelerator:
     - Name: top
+    # Need to add config and IR configurations here
       PIO: 32
       Bus: Local
       # Interrupt: 97 Need to Implement?

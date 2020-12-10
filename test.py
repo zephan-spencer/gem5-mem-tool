@@ -15,11 +15,11 @@ def buildSysVal(options, system, clstr):
 	gic = system.realview.gic
 
 	# Noncoherent DMA
-	clstr.dma.NoncoherentDma(pio_addr=0x10020000, pio_size = 21, gic=gic, int_num=123)
-	clstr.dma.cluster_dma = clstr.local_bus.slave
-	clstr.dma.max_req_size = 4
-	clstr.dma.buffer_size = 128
-	clstr._connect_dma(system, clstr.dma)
+	clstr.clusterdma.NoncoherentDma(pio_addr=0x10020000, pio_size = 21, gic=gic, int_num=123)
+	clstr.clusterdma.cluster_dma = clstr.local_bus.slave
+	clstr.clusterdma.max_req_size = 4
+	clstr.clusterdma.buffer_size = 128
+	clstr._connect_dma(system, clstr.clusterdma)
 	
 	# Stream DMA
 	clstr.streamdma0.StreamDma(pio_addr=0x10020080, pio_size = 32, gic=gic, max_pending = 32)
