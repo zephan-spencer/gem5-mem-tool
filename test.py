@@ -19,7 +19,7 @@ def buildSysVal(options, system, clstr):
 	clstr.clusterdma.cluster_dma = clstr.local_bus.slave
 	clstr.clusterdma.max_req_size = 4
 	clstr.clusterdma.buffer_size = 128
-	clstr._connect_dma(system, clstr.clusterdma)
+	clstr.clusterdma.dma = clstr.coherency_bus.slave
 	
 	# Accelerator
 	acc = "top"
@@ -28,6 +28,7 @@ def buildSysVal(options, system, clstr):
 	clstr.top = CommInterface(devicename=acc, gic=gic)
 	AccConfig(clstr.top, config, ir)
 	clstr._connect_hwacc(clstr.top)
+	clstr.top.local = clstr.clusterdma.pio
 	
 	# Accelerator
 	acc = "gemm"
@@ -42,7 +43,7 @@ def buildSysVal(options, system, clstr):
 	spmRange = AddrRange(addr, addr + 0x800)
 	clstr.matrix0 = ScratchpadMemory(range = spmRange)
 	clstr.matrix0.conf_table_reported = False
-	clstr.matrix0.ready_mode = True
+	clstr.matrix0.ready_mode = False
 	clstr.matrix0.port = clstr.local_bus.master
 	for i in range(2):
 		clstr.gemm.spm = clstr.matrix0.spm_ports
@@ -52,7 +53,7 @@ def buildSysVal(options, system, clstr):
 	spmRange = AddrRange(addr, addr + 0x800)
 	clstr.matrix1 = ScratchpadMemory(range = spmRange)
 	clstr.matrix1.conf_table_reported = False
-	clstr.matrix1.ready_mode = True
+	clstr.matrix1.ready_mode = False
 	clstr.matrix1.port = clstr.local_bus.master
 	for i in range(2):
 		clstr.gemm.spm = clstr.matrix1.spm_ports
@@ -62,7 +63,7 @@ def buildSysVal(options, system, clstr):
 	spmRange = AddrRange(addr, addr + 0x800)
 	clstr.matrix2 = ScratchpadMemory(range = spmRange)
 	clstr.matrix2.conf_table_reported = False
-	clstr.matrix2.ready_mode = True
+	clstr.matrix2.ready_mode = False
 	clstr.matrix2.port = clstr.local_bus.master
 	for i in range(2):
 		clstr.gemm.spm = clstr.matrix2.spm_ports

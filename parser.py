@@ -31,6 +31,7 @@ class AccCluster:
 			name = None
 			pioMasters = []
 			busConnections = []
+			localConnections = []
 			variables = []
 			streamVariables = []
 			pioAddress = None
@@ -51,6 +52,8 @@ class AccCluster:
 					pioMasters.extend((i['PIOMaster'].split(',')))
 				if 'Bus' in i:
 					busConnections.extend((i['Bus'].split(',')))
+				if 'Local' in i:
+					localConnections.extend((i['Local'].split(',')))
 				if 'Var' in i:
 					for j in i['Var']:
 						if "SPM" in j['Type']:
@@ -61,7 +64,7 @@ class AccCluster:
 							streamVariables.append(StreamVariable(j['Name'], j['InCon'], j['OutCon'],
 								int(j['StreamSize']), j['BufferSize'],  topAddress))
 							topAddress = topAddress + int(j['StreamSize'])
-			accClass.append(Accelerator(name, pioMasters, busConnections,
+			accClass.append(Accelerator(name, pioMasters, busConnections, localConnections,
 				pioAddress, configPath , IrPath, variables, streamVariables))
 
 		self.accs = accClass
@@ -87,10 +90,11 @@ class AccCluster:
 
 class Accelerator:
 
-	def __init__(self, name, pioMasters, busConnections, address, configPath, irPath, variables = None, streamVariables = None):
+	def __init__(self, name, pioMasters, busConnections, localConnections, address, configPath, irPath, variables = None, streamVariables = None):
 		self.name = name.lower()
 		self.pioMasters = pioMasters
 		self.busConnections = busConnections
+		self.localConnections = localConnections
 		self.address = address
 		self.variables = variables
 		self.streamVariables = streamVariables
@@ -112,7 +116,8 @@ class Accelerator:
 			# Might need to add more options here... only option now is connecting to local membus
 			if "Local" in i:
 				lines.append("clstr._connect_hwacc(clstr." + self.name + ")")
-
+		for i in self.localConnections:
+				lines.append("clstr." + self.name + ".local = clstr." + i.lower() + ".pio")
 		# Add connections from pio to local
 		for i in self.pioMasters:
 			lines.append("clstr." + self.name + ".pio " +
@@ -157,7 +162,8 @@ class StreamDma:
 		lines.append(dmaPath + "pio_delay = '1ns'")
 		lines.append(dmaPath + "rd_int = " + str(self.rd_int))
 		lines.append(dmaPath + "wr_int = " + str(self.wr_int))
-		lines.append("clstr._connect_dma(system, clstr." + self.name + ")")
+		# Probably need to fix this up
+		lines.append("clstr." + self.name + ".dma = clstr.coherency_bus.slave")
 		lines.append("")
 
 		return lines
@@ -183,7 +189,7 @@ class Dma:
 		lines.append(dmaPath + "cluster_dma = " + systemPath + "local_bus.slave")
 		lines.append(dmaPath + "max_req_size = " + str(self.MaxReq))
 		lines.append(dmaPath + "buffer_size = " + str(self.size))
-		lines.append("clstr._connect_dma(system, clstr." + self.name + ")")
+		lines.append("clstr." + self.name + ".dma = clstr.coherency_bus.slave")
 		lines.append("")
 
 		return lines
@@ -225,7 +231,7 @@ class Variable:
 		lines.append("clstr." + self.name + " = ScratchpadMemory(range = spmRange)")
 		# Probably need to add table and read mode to the YAML File
 		lines.append("clstr." + self.name + "." + "conf_table_reported = False")
-		lines.append("clstr." + self.name + "." + "ready_mode = True")
+		lines.append("clstr." + self.name + "." + "ready_mode = False")
 		lines.append("clstr." + self.name + "." + "port" + " = " + "clstr.local_bus.master")
 		lines.append("for i in range(" + str(self.ports) + "):")
 

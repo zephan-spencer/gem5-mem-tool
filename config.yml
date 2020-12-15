@@ -21,14 +21,16 @@ acc_cluster:
       ConfigPath: /home/he-man/gem5-SALAM/benchmarks/sys_validation/gemm/hw/top.ini
       PIO: 32
       Bus: Local
+      Local: ClusterDMA
       # Interrupt: 97 Need to Implement?
+      # Local to PIO
   - Accelerator:
     - Name: gemm
       IrPath: /home/he-man/gem5-SALAM/benchmarks/sys_validation/gemm/hw/gemm.ll
       ConfigPath: /home/he-man/gem5-SALAM/benchmarks/sys_validation/gemm/hw/gemm.ini
       PIO: 32
-      PIOMaster: top
       ResetSPM: True
+      PIOMaster: top
       # Interrupt: 98 Need to implement?
     - Var:
       - Name: Matrix0
