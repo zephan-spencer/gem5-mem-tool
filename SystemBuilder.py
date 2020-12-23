@@ -10,13 +10,14 @@ imports = "import m5\nfrom m5.objects import *\nfrom m5.util import *\nimport Co
 
 parser = argparse.ArgumentParser(description="SALAM System Builder")
 
-parser.add_argument('-name', help="System Name", required=True)
+parser.add_argument('-sysName', help="System Name", required=True)
+parser.add_argument('-headerName', help="Header Name", required=True)
 parser.add_argument('-benchDir', help="Path to Benchmark Directory", required=True)
 parser.add_argument('-config', help="Name of Config File", required=True)
 
 args=parser.parse_args()
 
-fileName = args.name
+fileName = args.sysName
 
 workingDirectory = args.benchDir
 
@@ -67,33 +68,53 @@ with open("/home/he-man/gem5-SALAM/configs/SALAM/" + fileName + ".py", 'w') as f
 		f.write("	system." + i.name.lower() + " = AccCluster()" + "\n")
 		f.write("	build" + i.name + "(options, system, system." + i.name.lower() + ")\n\n")
 
+begin = None
+end = None
+
+# Read in existing header
+try:
+	f = open(workingDirectory + args.headerName + ".h", 'r')
+	oldHeader = f.readlines()
+	for i in range(0,len(oldHeader)):
+		if oldHeader[i] == "//BEGIN GENERATED CODE\n":
+			begin = i
+		elif oldHeader[i] == "//END GENERATED CODE\n" or oldHeader[i] == "//END GENERATED CODE":
+			end = i
+	del oldHeader[begin:end+1]
+except:
+	print("No Header Found")
+	oldHeader = []
+print(oldHeader)
 # Write out header
-with open(workingDirectory + fileName + ".h", 'w') as f:
+with open(workingDirectory + args.headerName + ".h", 'w') as f:
+	oldHeader.append("//BEGIN GENERATED CODE\n")
 	for i in clusters:
-		f.write("//Cluster: " + j.name.upper() + "\n")
+		oldHeader.append("//Cluster: " + j.name.upper() + "\n")
 		for j in i.dmas:
 			if j.dmaType == "NonCoherent":
-				f.write("//" + j.dmaType + "DMA" + "\n")
-				f.write("#define " + j.name.upper() + "_Flags " + hex(j.address) + "\n")
-				f.write("#define " + j.name.upper() + "_RdAddr " + hex(j.address + 1) + "\n")
-				f.write("#define " + j.name.upper() + "_WrAddr " + hex(j.address + 9) + "\n")
-				f.write("#define " + j.name.upper() + "_CopyLen " + hex(j.address + 17) + "\n")
+				oldHeader.append("//" + j.dmaType + "DMA" + "\n")
+				oldHeader.append("#define " + j.name.upper() + "_Flags " + hex(j.address) + "\n")
+				oldHeader.append("#define " + j.name.upper() + "_RdAddr " + hex(j.address + 1) + "\n")
+				oldHeader.append("#define " + j.name.upper() + "_WrAddr " + hex(j.address + 9) + "\n")
+				oldHeader.append("#define " + j.name.upper() + "_CopyLen " + hex(j.address + 17) + "\n")
 			elif j.dmaType == "Stream":
-				f.write("//" + j.dmaType + "DMA" + "\n")
-				f.write("#define " + j.name.upper() + "_Flags " + hex(j.address) + "\n")
-				f.write("#define " + j.name.upper() + "_RdAddr " + hex(j.address + 4) + "\n")
-				f.write("#define " + j.name.upper() + "_WrAddr " + hex(j.address + 12) + "\n")
-				f.write("#define " + j.name.upper() + "_RdFrameSize " + hex(j.address + 20) + "\n")
-				f.write("#define " + j.name.upper() + "_NumRdFrames " + hex(j.address + 24) + "\n")
-				f.write("#define " + j.name.upper() + "_RdFrameBufSize " + hex(j.address + 25) + "\n")
-				f.write("#define " + j.name.upper() + "_WrFrameSize " + hex(j.address + 26) + "\n")
-				f.write("#define " + j.name.upper() + "_NumWrFrames " + hex(j.address + 30) + "\n")
-				f.write("#define " + j.name.upper() + "_WrFrameBufSize " + hex(j.address + 31) + "\n")
+				oldHeader.append("//" + j.dmaType + "DMA" + "\n")
+				oldHeader.append("#define " + j.name.upper() + "_Flags " + hex(j.address) + "\n")
+				oldHeader.append("#define " + j.name.upper() + "_RdAddr " + hex(j.address + 4) + "\n")
+				oldHeader.append("#define " + j.name.upper() + "_WrAddr " + hex(j.address + 12) + "\n")
+				oldHeader.append("#define " + j.name.upper() + "_RdFrameSize " + hex(j.address + 20) + "\n")
+				oldHeader.append("#define " + j.name.upper() + "_NumRdFrames " + hex(j.address + 24) + "\n")
+				oldHeader.append("#define " + j.name.upper() + "_RdFrameBufSize " + hex(j.address + 25) + "\n")
+				oldHeader.append("#define " + j.name.upper() + "_WrFrameSize " + hex(j.address + 26) + "\n")
+				oldHeader.append("#define " + j.name.upper() + "_NumWrFrames " + hex(j.address + 30) + "\n")
+				oldHeader.append("#define " + j.name.upper() + "_WrFrameBufSize " + hex(j.address + 31) + "\n")
 		for j in i.accs:
-			f.write("//Accelerator: " + j.name.upper() + "\n")
-			f.write("#define " + j.name.upper() + " " + hex(j.address) + "\n")
+			oldHeader.append("//Accelerator: " + j.name.upper() + "\n")
+			oldHeader.append("#define " + j.name.upper() + " " + hex(j.address) + "\n")
 			for k in j.variables:
-				f.write("#define " + k.name.upper() + " " + hex(k.address) + "\n")
+				oldHeader.append("#define " + k.name.upper() + " " + hex(k.address) + "\n")
+	oldHeader.append("//END GENERATED CODE")
+	f.writelines(oldHeader)
 
 # print(workingDirectory + fileName + ".h")
 
@@ -111,7 +132,7 @@ f = open("/home/he-man/gem5-SALAM/configs/SALAM/fs_" + fileName + ".py", "w")
 
 f.writelines(fullSystem)
 
-print(hex(clusters[-1].clusterTopAddress))
+# print(hex(clusters[-1].clusterTopAddress))
 
 if(clusters[-1].clusterTopAddress>maxAddress):
     print("WARNING: Address range is greater than defined for gem5")
