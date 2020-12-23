@@ -1,5 +1,3 @@
-# Need to rename define difference between system and cluster in all genconfigs
-
 class AccCluster:
 	def __init__(self, name, dmas, accs, baseAddress):
 		self.name = name
@@ -23,13 +21,15 @@ class AccCluster:
 					topAddress = topAddress + int(i['Size'])
 				elif 'Stream' in i['Type']:
 					dmaClass.append(StreamDma(i['Name'], i['PIO'], topAddress, i['Type'], i['ReadInt'], i['WriteInt'], i['Size']))
-					topAddress = topAddress + int(i['Size'])
+					topAddress = topAddress + int(i['Size'] + i['PIO'])
 
 		# Parse Accelerators
 		for acc in self.accs:
 
 			name = None
 			pioMasters = []
+			streamIn = None
+			streamOut = None
 			busConnections = []
 			localConnections = []
 			variables = []
@@ -39,6 +39,7 @@ class AccCluster:
 			configPath = None
 
 			for i in acc['Accelerator']:
+				# Need to add logic to handle out of order connections
 				if 'PIO' in i:
 					pioAddress = topAddress
 					topAddress = topAddress + i['PIO']
@@ -50,6 +51,10 @@ class AccCluster:
 					name = i['Name']
 				if 'PIOMaster' in i:
 					pioMasters.extend((i['PIOMaster'].split(',')))
+				if 'StreamIn' in i:
+					streamIn = i['StreamIn']
+				if 'StreamOut' in i:
+					streamOut = i['StreamOut']
 				if 'Bus' in i:
 					busConnections.extend((i['Bus'].split(',')))
 				if 'Local' in i:
@@ -65,7 +70,7 @@ class AccCluster:
 								int(j['StreamSize']), j['BufferSize'],  topAddress))
 							topAddress = topAddress + int(j['StreamSize'])
 			accClass.append(Accelerator(name, pioMasters, busConnections, localConnections,
-				pioAddress, configPath , IrPath, variables, streamVariables))
+				pioAddress, configPath , IrPath, streamIn, streamOut, variables, streamVariables))
 
 		self.accs = accClass
 		self.dmas = dmaClass
@@ -90,7 +95,7 @@ class AccCluster:
 
 class Accelerator:
 
-	def __init__(self, name, pioMasters, busConnections, localConnections, address, configPath, irPath, variables = None, streamVariables = None):
+	def __init__(self, name, pioMasters, busConnections, localConnections, address, configPath, irPath, streamIn, streamOut, variables = None, streamVariables = None):
 		self.name = name.lower()
 		self.pioMasters = pioMasters
 		self.busConnections = busConnections
@@ -100,6 +105,8 @@ class Accelerator:
 		self.streamVariables = streamVariables
 		self.configPath = configPath
 		self.irPath = irPath
+		self.streamIn = streamIn
+		self.streamOut = streamOut
 
 	def genConfig(self):
 		lines = []
@@ -122,6 +129,12 @@ class Accelerator:
 		for i in self.pioMasters:
 			lines.append("clstr." + self.name + ".pio " +
 				"=" " clstr." + i + ".local")
+		# Add StreamIn
+		if self.streamIn is not None:
+			lines.append("clstr." + self.name + ".stream = clstr." + self.streamIn.lower() + ".stream_in")
+		# Add StreamOut
+		if self.streamOut is not None:
+			lines.append("clstr." + self.name + ".stream = clstr." + self.streamOut.lower() + ".stream_out")
 
 		lines.append("")
 
@@ -136,8 +149,6 @@ class Accelerator:
 			lines = i.genConfig(lines)
 
 		return lines
-
-# Need to add a Stream DMA Class
 
 class StreamDma:
 	def __init__(self, name, pio, address, dmaType, rd_int = None, wr_int = None, size = 64):
@@ -155,19 +166,18 @@ class StreamDma:
 		systemPath = "clstr."
 		# Need to fix max_pending?
 		lines.append("# Stream DMA")
-		lines.append(dmaPath + "StreamDma(pio_addr=" + hex(self.address) + ", pio_size = " + str(self.pio) + ", gic=gic, max_pending = " + str(self.pio) + ")")
+		lines.append("clstr." + self.name + " = StreamDma(pio_addr=" + hex(self.address) + ", pio_size = " + str(self.pio) + ", gic=gic, max_pending = " + str(self.pio) + ")")
 		# Math is right here?
 		lines.append(dmaPath + "stream_addr = " + hex(self.address) + " + " + str(self.pio))
 		lines.append(dmaPath + "stream_size = " + str(self.size))
 		lines.append(dmaPath + "pio_delay = '1ns'")
 		lines.append(dmaPath + "rd_int = " + str(self.rd_int))
 		lines.append(dmaPath + "wr_int = " + str(self.wr_int))
-		# Probably need to fix this up
 		lines.append("clstr." + self.name + ".dma = clstr.coherency_bus.slave")
+		lines.append("clstr.local_bus.master = clstr." + self.name + ".pio")
 		lines.append("")
 
 		return lines
-
 
 class Dma:
 	def __init__(self, name, address, dmaType, int_num = None, size = 64, MaxReq = 4):
