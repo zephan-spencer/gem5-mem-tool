@@ -17,9 +17,9 @@ class AccCluster:
 			for i in dma['DMA']:
 				# Decide whether the DMA is NonCoherent or Stream
 				if 'NonCoherent' in i['Type'] :
-					dmaClass.append(Dma(i['Name'], topAddress, i['Type'],
+					dmaClass.append(Dma(i['Name'], i['PIO'], topAddress, i['Type'],
 						i['InterruptNum'], i['Size'], i['MaxReq']))
-					topAddress = topAddress + int(i['Size'])
+					topAddress = topAddress + int(i['Size'] + i['PIO'])
 				elif 'Stream' in i['Type']:
 					dmaClass.append(StreamDma(i['Name'], i['PIO'], topAddress, i['Type'],
 						i['ReadInt'], i['WriteInt'], i['Size']))
@@ -199,8 +199,9 @@ class StreamDma:
 		return lines
 
 class Dma:
-	def __init__(self, name, address, dmaType, int_num = None, size = 64, maxReq = 4):
+	def __init__(self, name, pio, address, dmaType, int_num = None, size = 64, maxReq = 4):
 		self.name = name.lower()
+		self.pio = pio
 		self.size = size
 		self.address = address
 		self.dmaType = dmaType
@@ -211,10 +212,9 @@ class Dma:
 		lines = []
 		dmaPath = "clstr." + self.name + "."
 		systemPath = "clstr."
-		# Is pio size always 21
 		lines.append("# Noncoherent DMA")
 		lines.append("clstr." + self.name + " = NoncoherentDma(pio_addr="
-			+ hex(self.address) + ", pio_size = " + "21" + ", gic=gic, int_num=" + str(self.int_num) +")")
+			+ hex(self.address) + ", pio_size = " + str(self.pio) + ", gic=gic, int_num=" + str(self.int_num) +")")
 		lines.append(dmaPath + "cluster_dma = " + systemPath + "local_bus.slave")
 		lines.append(dmaPath + "max_req_size = " + str(self.maxReq))
 		lines.append(dmaPath + "buffer_size = " + str(self.size))
