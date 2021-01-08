@@ -17,15 +17,18 @@ class AccCluster:
 			for i in dma['DMA']:
 				# Decide whether the DMA is NonCoherent or Stream
 				if 'NonCoherent' in i['Type'] :
-					dmaClass.append(Dma(i['Name'], topAddress, i['Type'], i['InterruptNum'], i['Size'], i['MaxReq']))
+					dmaClass.append(Dma(i['Name'], topAddress, i['Type'],
+						i['InterruptNum'], i['Size'], i['MaxReq']))
 					topAddress = topAddress + int(i['Size'])
 				elif 'Stream' in i['Type']:
-					dmaClass.append(StreamDma(i['Name'], i['PIO'], topAddress, i['Type'], i['ReadInt'], i['WriteInt'], i['Size']))
+					dmaClass.append(StreamDma(i['Name'], i['PIO'], topAddress, i['Type'],
+						i['ReadInt'], i['WriteInt'], i['Size']))
 					topAddress = topAddress + int(i['Size'] + i['PIO'])
 
 		# Parse Accelerators
 		for acc in self.accs:
-
+			# To handle Accs out of order, create a flag that Accs referenced already exist.
+			# Search accs for it.
 			name = None
 			pioMasters = []
 			streamIn = None
@@ -35,6 +38,8 @@ class AccCluster:
 			variables = []
 			streamVariables = []
 			pioAddress = None
+			pioSize = None
+			intNum = None
 			IrPath = None
 			configPath = None
 
@@ -42,6 +47,7 @@ class AccCluster:
 				# Need to add logic to handle out of order connections
 				if 'PIO' in i:
 					pioAddress = topAddress
+					pioSize = i['PIO']
 					topAddress = topAddress + i['PIO']
 				if 'IrPath' in i:
 					IrPath = i['IrPath']
@@ -59,6 +65,8 @@ class AccCluster:
 					busConnections.extend((i['Bus'].split(',')))
 				if 'Local' in i:
 					localConnections.extend((i['Local'].split(',')))
+				if 'Interrupt' in i:
+					intNum = i['Interrupt']
 				if 'Var' in i:
 					for j in i['Var']:
 						if "SPM" in j['Type']:
@@ -70,7 +78,7 @@ class AccCluster:
 								int(j['StreamSize']), j['BufferSize'],  topAddress))
 							topAddress = topAddress + int(j['StreamSize'])
 			accClass.append(Accelerator(name, pioMasters, busConnections, localConnections,
-				pioAddress, configPath , IrPath, streamIn, streamOut, variables, streamVariables))
+				pioAddress, pioSize, configPath , IrPath, streamIn, streamOut, intNum, variables, streamVariables))
 
 		self.accs = accClass
 		self.dmas = dmaClass
@@ -95,18 +103,20 @@ class AccCluster:
 
 class Accelerator:
 
-	def __init__(self, name, pioMasters, busConnections, localConnections, address, configPath, irPath, streamIn, streamOut, variables = None, streamVariables = None):
+	def __init__(self, name, pioMasters, busConnections, localConnections, address, size, configPath, irPath, streamIn, streamOut, intNum, variables = None, streamVariables = None):
 		self.name = name.lower()
 		self.pioMasters = pioMasters
 		self.busConnections = busConnections
 		self.localConnections = localConnections
 		self.address = address
+		self.size = size
 		self.variables = variables
 		self.streamVariables = streamVariables
 		self.configPath = configPath
 		self.irPath = irPath
 		self.streamIn = streamIn
 		self.streamOut = streamOut
+		self.intNum = intNum
 
 	def genConfig(self):
 		lines = []
@@ -115,7 +125,15 @@ class Accelerator:
 		# Need to add a user defined path & user defined interrupts here
 		lines.append("config = " + "\"" + self.configPath + "\"")
 		lines.append("ir = "  + "\"" + self.irPath + "\"")
-		lines.append("clstr." + self.name +" = CommInterface(devicename=acc, gic=gic)")
+
+		# Add interrupt number if it exists
+		if self.intNum is not None:
+			lines.append("clstr." + self.name +" = CommInterface(devicename=acc, gic=gic, pio_addr="
+			+ str(hex(self.address)) + ", pio_size=" + str(self.size) + ", int_num=" + str(self.intNum) + ")")
+		else:
+			lines.append("clstr." + self.name +" = CommInterface(devicename=acc, gic=gic, pio_addr="
+			+ str(hex(self.address)) + ", pio_size=" + str(self.size) + ")")
+
 		lines.append("AccConfig(clstr." + self.name + ", config, ir)")
 
 		# Add connections to memory buses
@@ -166,7 +184,8 @@ class StreamDma:
 		systemPath = "clstr."
 		# Need to fix max_pending?
 		lines.append("# Stream DMA")
-		lines.append("clstr." + self.name + " = StreamDma(pio_addr=" + hex(self.address) + ", pio_size = " + str(self.pio) + ", gic=gic, max_pending = " + str(self.pio) + ")")
+		lines.append("clstr." + self.name + " = StreamDma(pio_addr=" + hex(self.address) +
+			", pio_size = " + str(self.pio) + ", gic=gic, max_pending = " + str(self.pio) + ")")
 		# Math is right here?
 		lines.append(dmaPath + "stream_addr = " + hex(self.address) + " + " + str(self.pio))
 		lines.append(dmaPath + "stream_size = " + str(self.size))
@@ -180,13 +199,13 @@ class StreamDma:
 		return lines
 
 class Dma:
-	def __init__(self, name, address, dmaType, int_num = None, size = 64, MaxReq = 4):
+	def __init__(self, name, address, dmaType, int_num = None, size = 64, maxReq = 4):
 		self.name = name.lower()
 		self.size = size
 		self.address = address
 		self.dmaType = dmaType
 		self.int_num = int_num
-		self.MaxReq = MaxReq
+		self.maxReq = maxReq
 	# Probably could apply the style used here in other genConfigs
 	def genConfig(self):
 		lines = []
@@ -197,7 +216,7 @@ class Dma:
 		lines.append("clstr." + self.name + " = NoncoherentDma(pio_addr="
 			+ hex(self.address) + ", pio_size = " + "21" + ", gic=gic, int_num=" + str(self.int_num) +")")
 		lines.append(dmaPath + "cluster_dma = " + systemPath + "local_bus.slave")
-		lines.append(dmaPath + "max_req_size = " + str(self.MaxReq))
+		lines.append(dmaPath + "max_req_size = " + str(self.maxReq))
 		lines.append(dmaPath + "buffer_size = " + str(self.size))
 		lines.append("clstr." + self.name + ".dma = clstr.coherency_bus.slave")
 		lines.append("")
@@ -231,7 +250,6 @@ class Variable:
 		self.type = type
 		self.ports = ports
 		self.address = address
-
 
 	def genConfig(self, lines):
 		lines.append("# Variable")

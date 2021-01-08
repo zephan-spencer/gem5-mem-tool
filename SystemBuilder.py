@@ -41,7 +41,6 @@ for section in config:
 		for i in v:
 			if "Name" in i:
 				clusterName = i['Name']
-				# print("Adding Cluster: " + clusterName)
 			if "DMA" in i:
 				dmas.append(i)
 			if "Accelerator" in i:
@@ -84,7 +83,7 @@ try:
 except:
 	print("No Header Found")
 	oldHeader = []
-print(oldHeader)
+
 # Write out header
 with open(workingDirectory + args.headerName + ".h", 'w') as f:
 	oldHeader.append("//BEGIN GENERATED CODE\n")
