@@ -111,7 +111,7 @@ with open(workingDirectory + args.headerName + ".h", 'w') as f:
 			oldHeader.append("//Accelerator: " + j.name.upper() + "\n")
 			oldHeader.append("#define " + j.name.upper() + " " + hex(j.address) + "\n")
 			for k in j.variables:
-				oldHeader.append("#define " + k.name.upper() + " " + hex(k.address) + "\n")
+				oldHeader.append("#define " + k.name + " " + hex(k.address) + "\n")
 	oldHeader.append("//END GENERATED CODE")
 	f.writelines(oldHeader)
 

@@ -159,7 +159,7 @@ class Accelerator:
 		# Add scratchpad variables
 		for i in self.variables:
 			lines = i.genConfig(lines)
-			lines.append("	clstr." + self.name + ".spm = " + "clstr." + i.name + ".spm_ports")
+			lines.append("	clstr." + self.name.lower() + ".spm = " + "clstr." + i.name.lower() + ".spm_ports")
 			lines.append("")
 
 		# Add stream variables
@@ -227,9 +227,9 @@ class StreamVariable:
 	# Need to add read and write interrupts
 	def __init__ (self, name, inCon, outCon, streamSize,
 		bufferSize, address):
-		self.name = name.lower()
-		self.inCon = inCon
-		self.outCon = outCon
+		self.name = name
+		self.inCon = inCon.lower()
+		self.outCon = outCon.lower()
 		self.streamSize = streamSize
 		self.bufferSize = bufferSize
 		self.address = address
@@ -237,15 +237,15 @@ class StreamVariable:
 	def genConfig(self, lines):
 		lines.append("# Stream Variable")
 		lines.append("addr = " + hex(self.address))
-		lines.append("clstr." + self.name + " = StreamBuffer(stream_address = addr, stream_size = " + str(self.streamSize) + ", buffer_size = " + str(self.bufferSize) + ")")
-		lines.append("clstr." + self.inCon + ".stream = " + "clstr." + self.name + ".stream_in")
-		lines.append("clstr." + self.outCon + ".stream = " + "clstr." + self.name + ".stream_out")
+		lines.append("clstr." + self.name.lower() + " = StreamBuffer(stream_address = addr, stream_size = " + str(self.streamSize) + ", buffer_size = " + str(self.bufferSize) + ")")
+		lines.append("clstr." + self.inCon + ".stream = " + "clstr." + self.name.lower() + ".stream_in")
+		lines.append("clstr." + self.outCon + ".stream = " + "clstr." + self.name.lower() + ".stream_out")
 		lines.append("")
 		return lines
 
 class Variable:
 	def __init__ (self, name, size, type, ports, address = None):
-		self.name = name.lower()
+		self.name = name
 		self.size = size
 		self.type = type
 		self.ports = ports
@@ -256,11 +256,11 @@ class Variable:
 		lines.append("addr = " + hex(self.address))
 		lines.append("spmRange = AddrRange(addr, addr + " + hex(self.size) + ")")
 		# Choose a style with the "."s and pick it
-		lines.append("clstr." + self.name + " = ScratchpadMemory(range = spmRange)")
+		lines.append("clstr." + self.name.lower() + " = ScratchpadMemory(range = spmRange)")
 		# Probably need to add table and read mode to the YAML File
-		lines.append("clstr." + self.name + "." + "conf_table_reported = False")
-		lines.append("clstr." + self.name + "." + "ready_mode = False")
-		lines.append("clstr." + self.name + "." + "port" + " = " + "clstr.local_bus.master")
+		lines.append("clstr." + self.name.lower() + "." + "conf_table_reported = False")
+		lines.append("clstr." + self.name.lower() + "." + "ready_mode = False")
+		lines.append("clstr." + self.name.lower() + "." + "port" + " = " + "clstr.local_bus.master")
 		lines.append("for i in range(" + str(self.ports) + "):")
 
 		return lines
