@@ -42,6 +42,7 @@ class AccCluster:
 			intNum = None
 			IrPath = None
 			configPath = None
+			debug = False
 
 			for i in acc['Accelerator']:
 				# Need to add logic to handle out of order connections
@@ -67,18 +68,28 @@ class AccCluster:
 					localConnections.extend((i['Local'].split(',')))
 				if 'Interrupt' in i:
 					intNum = i['Interrupt']
+				if 'Debug' in i:
+					debug = i['Debug']
 				if 'Var' in i:
 					for j in i['Var']:
 						if "SPM" in j['Type']:
+							# Check if ready mode is defined
+							if 'ReadyMode' in j:
+								debug = j['ReadyMode']
+							else:
+								debug = False
+							# Create variable and add it to the list
 							variables.append(Variable(j['Name'], int(j['Size']),
-								j['Type'], j['Ports'], topAddress))
+								j['Type'], j['Ports'], topAddress, debug))
 							topAddress = topAddress + int(j['Size'])
 						if "Stream" in j['Type']:
+							# Create variable and add it to the list
 							streamVariables.append(StreamVariable(j['Name'], j['InCon'], j['OutCon'],
 								int(j['StreamSize']), j['BufferSize'],  topAddress))
 							topAddress = topAddress + int(j['StreamSize'])
 			accClass.append(Accelerator(name, pioMasters, busConnections, localConnections,
-				pioAddress, pioSize, configPath , IrPath, streamIn, streamOut, intNum, variables, streamVariables))
+				pioAddress, pioSize, configPath , IrPath, streamIn, streamOut, intNum, variables,
+				streamVariables, debug))
 
 		self.accs = accClass
 		self.dmas = dmaClass
@@ -103,7 +114,10 @@ class AccCluster:
 
 class Accelerator:
 
-	def __init__(self, name, pioMasters, busConnections, localConnections, address, size, configPath, irPath, streamIn, streamOut, intNum, variables = None, streamVariables = None):
+	def __init__(self, name, pioMasters, busConnections, localConnections, address,
+		size, configPath, irPath, streamIn, streamOut, intNum, variables = None,
+		streamVariables = None, debug = False):
+
 		self.name = name.lower()
 		self.pioMasters = pioMasters
 		self.busConnections = busConnections
@@ -117,6 +131,7 @@ class Accelerator:
 		self.streamIn = streamIn
 		self.streamOut = streamOut
 		self.intNum = intNum
+		self.debug = debug
 
 	def genConfig(self):
 		lines = []
@@ -154,6 +169,7 @@ class Accelerator:
 		if self.streamOut is not None:
 			lines.append("clstr." + self.name + ".stream = clstr." + self.streamOut.lower() + ".stream_out")
 
+		lines.append("clstr." + self.name + ".enable_debug_msgs = " + str(self.debug))
 		lines.append("")
 
 		# Add scratchpad variables
@@ -245,12 +261,13 @@ class StreamVariable:
 		return lines
 
 class Variable:
-	def __init__ (self, name, size, type, ports, address = None):
+	def __init__ (self, name, size, type, ports, address = None, readyMode = False):
 		self.name = name
 		self.size = size
 		self.type = type
 		self.ports = ports
 		self.address = address
+		self.readyMode = readyMode
 
 	def genConfig(self, lines):
 		lines.append("# Variable")
@@ -260,7 +277,7 @@ class Variable:
 		lines.append("clstr." + self.name.lower() + " = ScratchpadMemory(range = spmRange)")
 		# Probably need to add table and read mode to the YAML File
 		lines.append("clstr." + self.name.lower() + "." + "conf_table_reported = False")
-		lines.append("clstr." + self.name.lower() + "." + "ready_mode = False")
+		lines.append("clstr." + self.name.lower() + "." + "ready_mode = " + str(self.readyMode))
 		lines.append("clstr." + self.name.lower() + "." + "port" + " = " + "clstr.local_bus.master")
 		lines.append("for i in range(" + str(self.ports) + "):")
 
