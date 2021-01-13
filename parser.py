@@ -117,6 +117,7 @@ class Accelerator:
 		self.streamIn = streamIn
 		self.streamOut = streamOut
 		self.intNum = intNum
+		print(self.variables)
 
 	def genConfig(self):
 		lines = []

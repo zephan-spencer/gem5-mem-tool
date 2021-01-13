@@ -112,6 +112,8 @@ with open(workingDirectory + args.headerName + ".h", 'w') as f:
 			oldHeader.append("#define " + j.name.upper() + " " + hex(j.address) + "\n")
 			for k in j.variables:
 				oldHeader.append("#define " + k.name + " " + hex(k.address) + "\n")
+			for k in j.streamVariables:
+				oldHeader.append("#define " + k.name + " " + hex(k.address) + "\n")
 	oldHeader.append("//END GENERATED CODE")
 	f.writelines(oldHeader)
 
