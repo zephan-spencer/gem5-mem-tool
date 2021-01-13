@@ -117,7 +117,6 @@ class Accelerator:
 		self.streamIn = streamIn
 		self.streamOut = streamOut
 		self.intNum = intNum
-		print(self.variables)
 
 	def genConfig(self):
 		lines = []
@@ -194,7 +193,8 @@ class StreamDma:
 		lines.append(dmaPath + "rd_int = " + str(self.rd_int))
 		lines.append(dmaPath + "wr_int = " + str(self.wr_int))
 		lines.append("clstr." + self.name + ".dma = clstr.coherency_bus.slave")
-		lines.append("clstr.local_bus.master = clstr." + self.name + ".pio")
+		# Need to add an option to connect both the DMA and StreamDMA to the local bus
+		# lines.append("clstr.local_bus.master = clstr." + self.name + ".pio")
 		lines.append("")
 
 		return lines
