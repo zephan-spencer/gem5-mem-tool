@@ -8,6 +8,7 @@ from parser import *
 
 imports = "import m5\nfrom m5.objects import *\nfrom m5.util import *\nimport ConfigParser\nfrom HWAccConfig import *\n\n"
 
+# Parse Arguements
 parser = argparse.ArgumentParser(description="SALAM System Builder")
 
 parser.add_argument('-sysName', help="System Name", required=True)
@@ -17,9 +18,11 @@ parser.add_argument('-config', help="Name of Config File", required=True)
 
 args=parser.parse_args()
 
+# Set file information
 fileName = args.sysName
-
 workingDirectory = args.benchDir
+# This requires M5_PATH to point to your gem5-SALAM directory
+M5_Path = os.getenv('M5_PATH')
 
 stream = open(workingDirectory + args.config + '.yml', "r")
 
@@ -46,11 +49,11 @@ for section in config:
 			if "Accelerator" in i:
 				accs.append(i)
 
-	clusters.append(AccCluster(clusterName, dmas, accs, baseAddress))
+	clusters.append(AccCluster(clusterName, dmas, accs, baseAddress, M5_Path))
 	baseAddress = clusters[-1].clusterTopAddress + 1
 
 # Write out config file
-with open("/home/he-man/gem5-SALAM/configs/SALAM/" + fileName + ".py", 'w') as f:
+with open(M5_Path + "/configs/SALAM/" + fileName + ".py", 'w') as f:
 	f.write(imports)
 	for i in clusters:
 		for j in i.genConfig():
@@ -58,6 +61,9 @@ with open("/home/he-man/gem5-SALAM/configs/SALAM/" + fileName + ".py", 'w') as f
 		#Add cluster definitions here
 		for j in i.dmas:
 			for k in j.genConfig():
+				f.write("	" + k + "\n")
+		for j in i.accs:
+			for k in j.genDefinition():
 				f.write("	" + k + "\n")
 		for j in i.accs:
 			for k in j.genConfig():
@@ -119,17 +125,17 @@ with open(workingDirectory + args.headerName + ".h", 'w') as f:
 
 # print(workingDirectory + fileName + ".h")
 
-shutil.copyfile("fs_template.py","/home/he-man/gem5-SALAM/configs/SALAM/fs_" + fileName + ".py")
+shutil.copyfile("fs_template.py", M5_Path + "/configs/SALAM/fs_" + fileName + ".py")
 
 # Generate full system
-f = open("/home/he-man/gem5-SALAM/configs/SALAM/fs_" + fileName + ".py", "r")
+f = open(M5_Path + "/configs/SALAM/fs_" + fileName + ".py", "r")
 
 fullSystem = f.readlines()
 
 fullSystem[69] = "import " + fileName
 fullSystem[239] = "		" + fileName + ".makeHWAcc(options, test_sys)"
 
-f = open("/home/he-man/gem5-SALAM/configs/SALAM/fs_" + fileName + ".py", "w")
+f = open(M5_Path + "/configs/SALAM/fs_" + fileName + ".py", "w")
 
 f.writelines(fullSystem)
 

@@ -1,13 +1,13 @@
 class AccCluster:
-	def __init__(self, name, dmas, accs, baseAddress):
+	def __init__(self, name, dmas, accs, baseAddress, M5_Path):
 		self.name = name
 		self.dmas = dmas
 		self.accs = accs
 		self.clusterBaseAddress = baseAddress
 		self.clusterTopAddress = baseAddress
-		self.processConfig()
+		self.processConfig(M5_Path)
 
-	def processConfig(self):
+	def processConfig(self, M5_Path):
 		dmaClass = []
 		accClass = []
 		topAddress = self.clusterBaseAddress
@@ -17,13 +17,21 @@ class AccCluster:
 			for i in dma['DMA']:
 				# Decide whether the DMA is NonCoherent or Stream
 				if 'NonCoherent' in i['Type'] :
-					dmaClass.append(Dma(i['Name'], i['PIO'], topAddress, i['Type'],
+					pioSize = 21
+					pioMasters = []
+					if 'PIOMaster' in i:
+						pioMasters.extend((i['PIOMaster'].split(',')))
+					dmaClass.append(Dma(i['Name'], pioSize, pioMasters, topAddress, i['Type'],
 						i['InterruptNum'], i['Size'], i['MaxReq']))
-					topAddress = topAddress + int(i['Size'] + i['PIO'])
+					topAddress = topAddress + int(i['Size'] + pioSize)
 				elif 'Stream' in i['Type']:
-					dmaClass.append(StreamDma(i['Name'], i['PIO'], topAddress, i['Type'],
+					pioSize = 32
+					pioMasters = []
+					if 'PIOMaster' in i:
+						pioMasters.extend((i['PIOMaster'].split(',')))
+					dmaClass.append(StreamDma(i['Name'], pioSize, pioMasters, topAddress, i['Type'],
 						i['ReadInt'], i['WriteInt'], i['Size']))
-					topAddress = topAddress + int(i['Size'] + i['PIO'])
+					topAddress = topAddress + int(i['Size'] + pioSize)
 
 		# Parse Accelerators
 		for acc in self.accs:
@@ -33,7 +41,6 @@ class AccCluster:
 			pioMasters = []
 			streamIn = None
 			streamOut = None
-			busConnections = []
 			localConnections = []
 			variables = []
 			streamVariables = []
@@ -46,10 +53,10 @@ class AccCluster:
 
 			for i in acc['Accelerator']:
 				# Need to add logic to handle out of order connections
-				if 'PIO' in i:
+				if 'PIOSize' in i:
 					pioAddress = topAddress
-					pioSize = i['PIO']
-					topAddress = topAddress + i['PIO']
+					pioSize = i['PIOSize']
+					topAddress = topAddress + i['PIOSize']
 				if 'IrPath' in i:
 					IrPath = i['IrPath']
 				if 'ConfigPath' in i:
@@ -62,10 +69,8 @@ class AccCluster:
 					streamIn = i['StreamIn']
 				if 'StreamOut' in i:
 					streamOut = i['StreamOut']
-				if 'Bus' in i:
-					busConnections.extend((i['Bus'].split(',')))
-				if 'Local' in i:
-					localConnections.extend((i['Local'].split(',')))
+				if 'LocalSlaves' in i:
+					localConnections.extend((i['LocalSlaves'].split(',')))
 				if 'Interrupt' in i:
 					intNum = i['Interrupt']
 				if 'Debug' in i:
@@ -87,8 +92,8 @@ class AccCluster:
 							streamVariables.append(StreamVariable(j['Name'], j['InCon'], j['OutCon'],
 								int(j['StreamSize']), j['BufferSize'],  topAddress))
 							topAddress = topAddress + int(j['StreamSize'])
-			accClass.append(Accelerator(name, pioMasters, busConnections, localConnections,
-				pioAddress, pioSize, configPath , IrPath, streamIn, streamOut, intNum, variables,
+			accClass.append(Accelerator(name, pioMasters, localConnections,
+				pioAddress, pioSize, configPath , IrPath, streamIn, streamOut, intNum, M5_Path, variables,
 				streamVariables, debug))
 
 		self.accs = accClass
@@ -114,13 +119,12 @@ class AccCluster:
 
 class Accelerator:
 
-	def __init__(self, name, pioMasters, busConnections, localConnections, address,
-		size, configPath, irPath, streamIn, streamOut, intNum, variables = None,
+	def __init__(self, name, pioMasters, localConnections, address,
+		size, configPath, irPath, streamIn, streamOut, intNum, M5_Path, variables = None,
 		streamVariables = None, debug = False):
 
 		self.name = name.lower()
 		self.pioMasters = pioMasters
-		self.busConnections = busConnections
 		self.localConnections = localConnections
 		self.address = address
 		self.size = size
@@ -130,16 +134,17 @@ class Accelerator:
 		self.irPath = irPath
 		self.streamIn = streamIn
 		self.streamOut = streamOut
+		self.M5_Path = M5_Path
 		self.intNum = intNum
 		self.debug = debug
 
-	def genConfig(self):
+	def genDefinition(self):
 		lines = []
-		lines.append("# Accelerator")
+		lines.append("# " + self.name + " Definition")
 		lines.append("acc = " + "\"" + self.name + "\"")
 		# Need to add a user defined path & user defined interrupts here
-		lines.append("config = " + "\"" + self.configPath + "\"")
-		lines.append("ir = "  + "\"" + self.irPath + "\"")
+		lines.append("config = " + "\"" + self.M5_Path + "/" + self.configPath + "\"")
+		lines.append("ir = "  + "\"" + self.M5_Path + "/" + self.irPath + "\"")
 
 		# Add interrupt number if it exists
 		if self.intNum is not None:
@@ -150,18 +155,28 @@ class Accelerator:
 			+ str(hex(self.address)) + ", pio_size=" + str(self.size) + ")")
 
 		lines.append("AccConfig(clstr." + self.name + ", config, ir)")
+		lines.append("")
 
-		# Add connections to memory buses
-		for i in self.busConnections:
-			# Might need to add more options here... only option now is connecting to local membus
-			if "Local" in i:
-				lines.append("clstr._connect_hwacc(clstr." + self.name + ")")
+		return lines
+
+	def genConfig(self):
+		lines = []
+
+		lines.append("# " + self.name + " Config")
+
 		for i in self.localConnections:
-				lines.append("clstr." + self.name + ".local = clstr." + i.lower() + ".pio")
-		# Add connections from pio to local
+				if "LocalBus" in i:
+					lines.append("clstr." + self.name + ".local = clstr.local_bus.slave")
+				else:
+					lines.append("clstr." + self.name + ".local = clstr." + i.lower() + ".pio")
+
+		# Assign PIO Masters
 		for i in self.pioMasters:
-			lines.append("clstr." + self.name + ".pio " +
-				"=" " clstr." + i + ".local")
+			if "LocalBus" in i:
+				lines.append("clstr." + self.name + ".pio = clstr.local_bus.master")
+			else:
+				lines.append("clstr." + self.name + ".pio " +
+					"=" " clstr." + i + ".local")
 		# Add StreamIn
 		if self.streamIn is not None:
 			lines.append("clstr." + self.name + ".stream = clstr." + self.streamIn.lower() + ".stream_in")
@@ -185,14 +200,23 @@ class Accelerator:
 		return lines
 
 class StreamDma:
-	def __init__(self, name, pio, address, dmaType, rd_int = None, wr_int = None, size = 64):
+	def __init__(self, name, pio, pioMasters, address, dmaType, rd_int = None, wr_int = None, size = 64):
 		self.name = name.lower()
 		self.pio = pio
+		self.pioMasters = pioMasters
 		self.size = size
 		self.address = address
 		self.dmaType = dmaType
 		self.rd_int = rd_int
 		self.wr_int = wr_int
+
+		print(pioMasters)
+
+		for i in self.pioMasters:
+			count = 0
+			if "localbus" in i.lower():
+				pioMasters[count] = "local_bus"
+				count += 1
 	# Probably could apply the style used here in other genConfigs
 	def genConfig(self):
 		lines = []
@@ -209,21 +233,29 @@ class StreamDma:
 		lines.append(dmaPath + "rd_int = " + str(self.rd_int))
 		lines.append(dmaPath + "wr_int = " + str(self.wr_int))
 		lines.append("clstr." + self.name + ".dma = clstr.coherency_bus.slave")
-		# Need to add an option to connect both the DMA and StreamDMA to the local bus
-		# lines.append("clstr.local_bus.master = clstr." + self.name + ".pio")
+		if self.pioMasters is not None:
+			for i in self.pioMasters:
+				lines.append("clstr." + i.lower() + ".master = clstr." + self.name + ".pio" )
 		lines.append("")
 
 		return lines
 
 class Dma:
-	def __init__(self, name, pio, address, dmaType, int_num = None, size = 64, maxReq = 4):
+	def __init__(self, name, pio, pioMasters, address, dmaType, int_num = None, size = 64, maxReq = 4):
 		self.name = name.lower()
 		self.pio = pio
+		self.pioMasters = pioMasters
 		self.size = size
 		self.address = address
 		self.dmaType = dmaType
 		self.int_num = int_num
 		self.maxReq = maxReq
+
+		for i in self.pioMasters:
+			count = 0
+			if "localbus" in i.lower():
+				pioMasters[count] = "local_bus"
+				count += 1
 	# Probably could apply the style used here in other genConfigs
 	def genConfig(self):
 		lines = []
@@ -236,6 +268,9 @@ class Dma:
 		lines.append(dmaPath + "max_req_size = " + str(self.maxReq))
 		lines.append(dmaPath + "buffer_size = " + str(self.size))
 		lines.append("clstr." + self.name + ".dma = clstr.coherency_bus.slave")
+		if self.pioMasters is not None:
+			for i in self.pioMasters:
+				lines.append("clstr." + i.lower() + ".master = clstr." + self.name + ".pio" )
 		lines.append("")
 
 		return lines
@@ -252,7 +287,7 @@ class StreamVariable:
 		self.address = address
 
 	def genConfig(self, lines):
-		lines.append("# Stream Variable")
+		lines.append("# " + self.name + " (Stream Variable)")
 		lines.append("addr = " + hex(self.address))
 		lines.append("clstr." + self.name.lower() + " = StreamBuffer(stream_address = addr, stream_size = " + str(self.streamSize) + ", buffer_size = " + str(self.bufferSize) + ")")
 		lines.append("clstr." + self.inCon + ".stream = " + "clstr." + self.name.lower() + ".stream_in")
@@ -270,7 +305,7 @@ class Variable:
 		self.readyMode = readyMode
 
 	def genConfig(self, lines):
-		lines.append("# Variable")
+		lines.append("# " + self.name + " (Variable)")
 		lines.append("addr = " + hex(self.address))
 		lines.append("spmRange = AddrRange(addr, addr + " + hex(self.size) + ")")
 		# Choose a style with the "."s and pick it
