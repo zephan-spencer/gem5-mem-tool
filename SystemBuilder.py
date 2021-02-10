@@ -20,9 +20,10 @@ args=parser.parse_args()
 
 # Set file information
 fileName = args.sysName
-workingDirectory = args.benchDir
 # This requires M5_PATH to point to your gem5-SALAM directory
 M5_Path = os.getenv('M5_PATH')
+
+workingDirectory = M5_Path + "/"  + args.benchDir
 
 stream = open(workingDirectory + args.config + '.yml', "r")
 
@@ -113,6 +114,7 @@ with open(workingDirectory + args.headerName + ".h", 'w') as f:
 				oldHeader.append("#define " + j.name.upper() + "_WrFrameSize " + hex(j.address + 26) + "\n")
 				oldHeader.append("#define " + j.name.upper() + "_NumWrFrames " + hex(j.address + 30) + "\n")
 				oldHeader.append("#define " + j.name.upper() + "_WrFrameBufSize " + hex(j.address + 31) + "\n")
+				oldHeader.append("#define " + j.name.upper() + "_Stream " + hex(j.address + 32) + "\n")
 		for j in i.accs:
 			oldHeader.append("//Accelerator: " + j.name.upper() + "\n")
 			oldHeader.append("#define " + j.name.upper() + " " + hex(j.address) + "\n")

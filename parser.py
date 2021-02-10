@@ -80,12 +80,12 @@ class AccCluster:
 						if "SPM" in j['Type']:
 							# Check if ready mode is defined
 							if 'ReadyMode' in j:
-								debug = j['ReadyMode']
+								readyMode = j['ReadyMode']
 							else:
-								debug = False
+								readyMode = False
 							# Create variable and add it to the list
 							variables.append(Variable(j['Name'], int(j['Size']),
-								j['Type'], j['Ports'], topAddress, debug))
+								j['Type'], j['Ports'], topAddress, readyMode))
 							topAddress = topAddress + int(j['Size'])
 						if "Stream" in j['Type']:
 							# Create variable and add it to the list
@@ -209,8 +209,6 @@ class StreamDma:
 		self.dmaType = dmaType
 		self.rd_int = rd_int
 		self.wr_int = wr_int
-
-		print(pioMasters)
 
 		for i in self.pioMasters:
 			count = 0
