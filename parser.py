@@ -39,8 +39,8 @@ class AccCluster:
 			# Search accs for it.
 			name = None
 			pioMasters = []
-			streamIn = None
-			streamOut = None
+			streamIn = []
+			streamOut = []
 			localConnections = []
 			variables = []
 			streamVariables = []
@@ -66,9 +66,9 @@ class AccCluster:
 				if 'PIOMaster' in i:
 					pioMasters.extend((i['PIOMaster'].split(',')))
 				if 'StreamIn' in i:
-					streamIn = i['StreamIn']
+					streamIn.extend((i['StreamIn'].split(',')))
 				if 'StreamOut' in i:
-					streamOut = i['StreamOut']
+					streamOut.extend((i['StreamOut'].split(',')))
 				if 'LocalSlaves' in i:
 					localConnections.extend((i['LocalSlaves'].split(',')))
 				if 'Interrupt' in i:
@@ -178,11 +178,11 @@ class Accelerator:
 				lines.append("clstr." + self.name + ".pio " +
 					"=" " clstr." + i + ".local")
 		# Add StreamIn
-		if self.streamIn is not None:
-			lines.append("clstr." + self.name + ".stream = clstr." + self.streamIn.lower() + ".stream_in")
+		for i in self.streamIn:
+			lines.append("clstr." + self.name + ".stream = clstr." + i.lower() + ".stream_in")
 		# Add StreamOut
-		if self.streamOut is not None:
-			lines.append("clstr." + self.name + ".stream = clstr." + self.streamOut.lower() + ".stream_out")
+		for i in self.streamOut:
+			lines.append("clstr." + self.name + ".stream = clstr." + i.lower() + ".stream_out")
 
 		lines.append("clstr." + self.name + ".enable_debug_msgs = " + str(self.debug))
 		lines.append("")
