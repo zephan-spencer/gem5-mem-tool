@@ -78,52 +78,58 @@ begin = None
 end = None
 
 # Read in existing header
-try:
-	f = open(workingDirectory + args.headerName + ".h", 'r')
-	oldHeader = f.readlines()
-	for i in range(0,len(oldHeader)):
-		if oldHeader[i] == "//BEGIN GENERATED CODE\n":
-			begin = i
-		elif oldHeader[i] == "//END GENERATED CODE\n" or oldHeader[i] == "//END GENERATED CODE":
-			end = i
-	del oldHeader[begin:end+1]
-except:
-	print("No Header Found")
-	oldHeader = []
+headerlist = []
+for i in clusters:
+	try:
+		f = open(workingDirectory + i.name  + "_" + args.headerName + ".h", 'r')
+		oldHeader = f.readlines()
+		for i in range(0,len(oldHeader)):
+			if oldHeader[i] == "//BEGIN GENERATED CODE\n":
+				begin = i
+			elif oldHeader[i] == "//END GENERATED CODE\n" or oldHeader[i] == "//END GENERATED CODE":
+				end = i
+		del oldHeader[begin:end+1]
+		headerlist.append(oldHeader)
+	except:
+		print("No Header Found")
+		emptyList = []
+		headerlist.append(emptyList)
 
-# Write out header
-with open(workingDirectory + args.headerName + ".h", 'w') as f:
-	oldHeader.append("//BEGIN GENERATED CODE\n")
+# Write out headers
+for currentHeader in headerlist:
 	for i in clusters:
-		oldHeader.append("//Cluster: " + j.name.upper() + "\n")
-		for j in i.dmas:
-			if j.dmaType == "NonCoherent":
-				oldHeader.append("//" + j.dmaType + "DMA" + "\n")
-				oldHeader.append("#define " + j.name.upper() + "_Flags " + hex(j.address) + "\n")
-				oldHeader.append("#define " + j.name.upper() + "_RdAddr " + hex(j.address + 1) + "\n")
-				oldHeader.append("#define " + j.name.upper() + "_WrAddr " + hex(j.address + 9) + "\n")
-				oldHeader.append("#define " + j.name.upper() + "_CopyLen " + hex(j.address + 17) + "\n")
-			elif j.dmaType == "Stream":
-				oldHeader.append("//" + j.dmaType + "DMA" + "\n")
-				oldHeader.append("#define " + j.name.upper() + "_Flags " + hex(j.address) + "\n")
-				oldHeader.append("#define " + j.name.upper() + "_RdAddr " + hex(j.address + 4) + "\n")
-				oldHeader.append("#define " + j.name.upper() + "_WrAddr " + hex(j.address + 12) + "\n")
-				oldHeader.append("#define " + j.name.upper() + "_RdFrameSize " + hex(j.address + 20) + "\n")
-				oldHeader.append("#define " + j.name.upper() + "_NumRdFrames " + hex(j.address + 24) + "\n")
-				oldHeader.append("#define " + j.name.upper() + "_RdFrameBufSize " + hex(j.address + 25) + "\n")
-				oldHeader.append("#define " + j.name.upper() + "_WrFrameSize " + hex(j.address + 26) + "\n")
-				oldHeader.append("#define " + j.name.upper() + "_NumWrFrames " + hex(j.address + 30) + "\n")
-				oldHeader.append("#define " + j.name.upper() + "_WrFrameBufSize " + hex(j.address + 31) + "\n")
-				oldHeader.append("#define " + j.name.upper() + "_Stream " + hex(j.address + 32) + "\n")
-		for j in i.accs:
-			oldHeader.append("//Accelerator: " + j.name.upper() + "\n")
-			oldHeader.append("#define " + j.name.upper() + " " + hex(j.address) + "\n")
-			for k in j.variables:
-				oldHeader.append("#define " + k.name + " " + hex(k.address) + "\n")
-			for k in j.streamVariables:
-				oldHeader.append("#define " + k.name + " " + hex(k.address) + "\n")
-	oldHeader.append("//END GENERATED CODE")
-	f.writelines(oldHeader)
+		with open(workingDirectory + i.name  + "_" + args.headerName + ".h", 'w') as f:
+			currentHeader.append("//BEGIN GENERATED CODE\n")
+			currentHeader.append("//Cluster: " + j.name.upper() + "\n")
+			for j in i.dmas:
+				if j.dmaType == "NonCoherent":
+					currentHeader.append("//" + j.dmaType + "DMA" + "\n")
+					currentHeader.append("#define " + j.name.upper() + "_Flags " + hex(j.address) + "\n")
+					currentHeader.append("#define " + j.name.upper() + "_RdAddr " + hex(j.address + 1) + "\n")
+					currentHeader.append("#define " + j.name.upper() + "_WrAddr " + hex(j.address + 9) + "\n")
+					currentHeader.append("#define " + j.name.upper() + "_CopyLen " + hex(j.address + 17) + "\n")
+				elif j.dmaType == "Stream":
+					currentHeader.append("//" + j.dmaType + "DMA" + "\n")
+					currentHeader.append("#define " + j.name.upper() + "_Flags " + hex(j.address) + "\n")
+					currentHeader.append("#define " + j.name.upper() + "_RdAddr " + hex(j.address + 4) + "\n")
+					currentHeader.append("#define " + j.name.upper() + "_WrAddr " + hex(j.address + 12) + "\n")
+					currentHeader.append("#define " + j.name.upper() + "_RdFrameSize " + hex(j.address + 20) + "\n")
+					currentHeader.append("#define " + j.name.upper() + "_NumRdFrames " + hex(j.address + 24) + "\n")
+					currentHeader.append("#define " + j.name.upper() + "_RdFrameBufSize " + hex(j.address + 25) + "\n")
+					currentHeader.append("#define " + j.name.upper() + "_WrFrameSize " + hex(j.address + 26) + "\n")
+					currentHeader.append("#define " + j.name.upper() + "_NumWrFrames " + hex(j.address + 30) + "\n")
+					currentHeader.append("#define " + j.name.upper() + "_WrFrameBufSize " + hex(j.address + 31) + "\n")
+					currentHeader.append("#define " + j.name.upper() + "_Stream " + hex(j.address + 32) + "\n")
+			for j in i.accs:
+				currentHeader.append("//Accelerator: " + j.name.upper() + "\n")
+				currentHeader.append("#define " + j.name.upper() + " " + hex(j.address) + "\n")
+				for k in j.variables:
+					currentHeader.append("#define " + k.name + " " + hex(k.address) + "\n")
+				for k in j.streamVariables:
+					currentHeader.append("#define " + k.name + " " + hex(k.address) + "\n")
+			currentHeader.append("//END GENERATED CODE")
+			f.writelines(currentHeader)
+			currentHeader = []
 
 # print(workingDirectory + fileName + ".h")
 
