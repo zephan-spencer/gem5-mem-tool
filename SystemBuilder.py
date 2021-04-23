@@ -125,8 +125,6 @@ for currentHeader in headerlist:
 				currentHeader.append("#define " + j.name.upper() + " " + hex(j.address) + "\n")
 				for k in j.variables:
 					currentHeader.append("#define " + k.name + " " + hex(k.address) + "\n")
-				for k in j.streamVariables:
-					currentHeader.append("#define " + k.name + " " + hex(k.address) + "\n")
 			currentHeader.append("//END GENERATED CODE")
 			f.writelines(currentHeader)
 			currentHeader = []

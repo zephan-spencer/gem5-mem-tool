@@ -43,7 +43,6 @@ class AccCluster:
 			streamOut = []
 			localConnections = []
 			variables = []
-			streamVariables = []
 			pioAddress = None
 			pioSize = None
 			intNum = None
@@ -77,24 +76,12 @@ class AccCluster:
 					debug = i['Debug']
 				if 'Var' in i:
 					for j in i['Var']:
-						if "SPM" in j['Type']:
-							# Check if ready mode is defined
-							if 'ReadyMode' in j:
-								readyMode = j['ReadyMode']
-							else:
-								readyMode = False
-							# Create variable and add it to the list
-							variables.append(Variable(j['Name'], int(j['Size']),
-								j['Type'], j['Ports'], topAddress, readyMode))
-							topAddress = topAddress + int(j['Size'])
-						if "Stream" in j['Type']:
-							# Create variable and add it to the list
-							streamVariables.append(StreamVariable(j['Name'], j['InCon'], j['OutCon'],
-								int(j['StreamSize']), j['BufferSize'],  topAddress))
-							topAddress = topAddress + int(j['StreamSize'])
+						dictTest = dict(j)
+						dictTest['Address'] = topAddress
+						variables.append(Variable(**dictTest))
+						topAddress = topAddress + int(j['Size'])
 			accClass.append(Accelerator(name, pioMasters, localConnections,
-				pioAddress, pioSize, configPath , IrPath, streamIn, streamOut, intNum, M5_Path, variables,
-				streamVariables, debug))
+				pioAddress, pioSize, configPath , IrPath, streamIn, streamOut, intNum, M5_Path, variables, debug))
 
 		self.accs = accClass
 		self.dmas = dmaClass
@@ -120,8 +107,7 @@ class AccCluster:
 class Accelerator:
 
 	def __init__(self, name, pioMasters, localConnections, address,
-		size, configPath, irPath, streamIn, streamOut, intNum, M5_Path, variables = None,
-		streamVariables = None, debug = False):
+		size, configPath, irPath, streamIn, streamOut, intNum, M5_Path, variables = None, debug = False):
 
 		self.name = name.lower()
 		self.pioMasters = pioMasters
@@ -129,7 +115,6 @@ class Accelerator:
 		self.address = address
 		self.size = size
 		self.variables = variables
-		self.streamVariables = streamVariables
 		self.configPath = configPath
 		self.irPath = irPath
 		self.streamIn = streamIn
@@ -189,14 +174,13 @@ class Accelerator:
 
 		# Add scratchpad variables
 		for i in self.variables:
+			# Have the variable create its config
 			lines = i.genConfig(lines)
-			lines.append("	clstr." + self.name.lower() + ".spm = " + "clstr." + i.name.lower() + ".spm_ports")
+			# Add a connection to the acc's spm ports
+			if i.type == 'SPM':
+				lines.append("	clstr." + self.name.lower() + ".spm = " + "clstr." + i.name.lower() + ".spm_ports")
 			lines.append("")
-
-		# Add stream variables
-		for i in self.streamVariables:
-			lines = i.genConfig(lines)
-
+		# Return finished config portion
 		return lines
 
 class StreamDma:
@@ -224,7 +208,6 @@ class StreamDma:
 		lines.append("# Stream DMA")
 		lines.append("clstr." + self.name + " = StreamDma(pio_addr=" + hex(self.address) +
 			", pio_size = " + str(self.pio) + ", gic=gic, max_pending = " + str(self.pio) + ")")
-		# Math is right here?
 		lines.append(dmaPath + "stream_addr = " + hex(self.address) + " + " + str(self.pio))
 		lines.append(dmaPath + "stream_size = " + str(self.size))
 		lines.append(dmaPath + "pio_delay = '1ns'")
@@ -261,7 +244,8 @@ class Dma:
 		systemPath = "clstr."
 		lines.append("# Noncoherent DMA")
 		lines.append("clstr." + self.name + " = NoncoherentDma(pio_addr="
-			+ hex(self.address) + ", pio_size = " + str(self.pio) + ", gic=gic, int_num=" + str(self.int_num) +")")
+			+ hex(self.address) + ", pio_size = " + str(self.pio)
+			+ ", gic=gic, int_num=" + str(self.int_num) +")")
 		lines.append(dmaPath + "cluster_dma = " + systemPath + "local_bus.slave")
 		lines.append(dmaPath + "max_req_size = " + str(self.maxReq))
 		lines.append(dmaPath + "buffer_size = " + str(self.size))
@@ -273,45 +257,55 @@ class Dma:
 
 		return lines
 
-class StreamVariable:
-	# Need to add read and write interrupts
-	def __init__ (self, name, inCon, outCon, streamSize,
-		bufferSize, address):
-		self.name = name
-		self.inCon = inCon.lower()
-		self.outCon = outCon.lower()
-		self.streamSize = streamSize
-		self.bufferSize = bufferSize
-		self.address = address
-
-	def genConfig(self, lines):
-		lines.append("# " + self.name + " (Stream Variable)")
-		lines.append("addr = " + hex(self.address))
-		lines.append("clstr." + self.name.lower() + " = StreamBuffer(stream_address = addr, stream_size = " + str(self.streamSize) + ", buffer_size = " + str(self.bufferSize) + ")")
-		lines.append("clstr." + self.inCon + ".stream = " + "clstr." + self.name.lower() + ".stream_in")
-		lines.append("clstr." + self.outCon + ".stream = " + "clstr." + self.name.lower() + ".stream_out")
-		lines.append("")
-		return lines
-
 class Variable:
-	def __init__ (self, name, size, type, ports, address = None, readyMode = False):
-		self.name = name
-		self.size = size
-		self.type = type
-		self.ports = ports
-		self.address = address
-		self.readyMode = readyMode
+	def __init__ (self, **kwargs):
+		# Read the type first
+		self.type = kwargs.get('Type')
+		if self.type == 'SPM':
+			# Read in SPM args
+			self.name = kwargs.get('Name')
+			self.size = kwargs.get('Size')
+			self.ports = kwargs.get('Ports')
+			self.address = kwargs.get('Address')
+			self.readyMode = kwargs.get('ReadyMode', False)
+		elif self.type == 'Stream':
+			# Read in Stream args
+			self.name = kwargs.get('Name')
+			self.inCon = kwargs.get('InCon')
+			self.outCon = kwargs.get('OutCon')
+			self.streamSize = kwargs.get('StreamSize')
+			self.bufferSize = kwargs.get('BufferSize')
+			self.address = kwargs.get('Address')
+			# Convert connection definitions to lowercase
+			self.inCon = inCon.lower()
+			self.outCon = outCon.lower()
+		else:
+			print(self.type)
+			# Throw an exception if we don't know the type
+			exceptionString = "The Variable: " + kwargs.get('name')
+			+ " has an invalid type named: " + str(self.type)
+			raise VariableTypeError(exceptionString)
 
 	def genConfig(self, lines):
-		lines.append("# " + self.name + " (Variable)")
-		lines.append("addr = " + hex(self.address))
-		lines.append("spmRange = AddrRange(addr, addr + " + hex(self.size) + ")")
-		# Choose a style with the "."s and pick it
-		lines.append("clstr." + self.name.lower() + " = ScratchpadMemory(range = spmRange)")
-		# Probably need to add table and read mode to the YAML File
-		lines.append("clstr." + self.name.lower() + "." + "conf_table_reported = False")
-		lines.append("clstr." + self.name.lower() + "." + "ready_mode = " + str(self.readyMode))
-		lines.append("clstr." + self.name.lower() + "." + "port" + " = " + "clstr.local_bus.master")
-		lines.append("for i in range(" + str(self.ports) + "):")
+
+		if self.type == 'Stream':
+			lines.append("# " + self.name + " (Stream Variable)")
+			lines.append("addr = " + hex(self.address))
+			lines.append("clstr." + self.name.lower() + " = StreamBuffer(stream_address = addr, stream_size = "
+			+ str(self.streamSize) + ", buffer_size = " + str(self.bufferSize) + ")")
+			lines.append("clstr." + self.inCon + ".stream = " + "clstr." + self.name.lower() + ".stream_in")
+			lines.append("clstr." + self.outCon + ".stream = " + "clstr." + self.name.lower() + ".stream_out")
+			lines.append("")
+		elif self.type == 'SPM':
+			lines.append("# " + self.name + " (Variable)")
+			lines.append("addr = " + hex(self.address))
+			lines.append("spmRange = AddrRange(addr, addr + " + hex(self.size) + ")")
+			# Choose a style with the "."s and pick it
+			lines.append("clstr." + self.name.lower() + " = ScratchpadMemory(range = spmRange)")
+			# Probably need to add table and read mode to the YAML File
+			lines.append("clstr." + self.name.lower() + "." + "conf_table_reported = False")
+			lines.append("clstr." + self.name.lower() + "." + "ready_mode = " + str(self.readyMode))
+			lines.append("clstr." + self.name.lower() + "." + "port" + " = " + "clstr.local_bus.master")
+			lines.append("for i in range(" + str(self.ports) + "):")
 
 		return lines
