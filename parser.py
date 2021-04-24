@@ -32,7 +32,6 @@ class AccCluster:
 					dmaClass.append(StreamDma(i['Name'], pioSize, pioMasters, topAddress, i['Type'],
 						i['ReadInt'], i['WriteInt'], i['Size']))
 					topAddress = topAddress + int(i['Size'] + pioSize)
-
 		# Parse Accelerators
 		for acc in self.accs:
 			# To handle Accs out of order, create a flag that Accs referenced already exist.
@@ -50,8 +49,13 @@ class AccCluster:
 			configPath = None
 			debug = False
 
+			# Find the name first...
+			# Also, find a non-stupid way to find the name first
 			for i in acc['Accelerator']:
-				# Need to add logic to handle out of order connections
+				if 'Name' in i:
+					name = i['Name']
+			# Parse the rest of the parameters
+			for i in acc['Accelerator']:
 				if 'PIOSize' in i:
 					pioAddress = topAddress
 					pioSize = i['PIOSize']
@@ -60,8 +64,6 @@ class AccCluster:
 					IrPath = i['IrPath']
 				if 'ConfigPath' in i:
 					configPath = i['ConfigPath']
-				if 'Name' in i:
-					name = i['Name']
 				if 'PIOMaster' in i:
 					pioMasters.extend((i['PIOMaster'].split(',')))
 				if 'StreamIn' in i:
@@ -78,8 +80,20 @@ class AccCluster:
 					for j in i['Var']:
 						dictTest = dict(j)
 						dictTest['Address'] = topAddress
+						dictTest['AccName'] = name
 						variables.append(Variable(**dictTest))
-						topAddress = topAddress + int(j['Size'])
+						if "SPM" in j['Type']:
+							topAddress = topAddress + int(j['Size'])
+						elif "Stream" in j['Type']:
+							topAddress = topAddress + int(j['StreamSize'])
+						elif "Cache" in j['Type']:
+							# Don't need to change anything for cache
+							topAddress = topAddress
+						else:
+							# Should never get here... but just in case throw an exception
+							exceptionString = ("The Variable: " + kwargs.get('Name')
+							+ " has an invalid type named: " + self.type)
+							raise Exception(exceptionString)
 			accClass.append(Accelerator(name, pioMasters, localConnections,
 				pioAddress, pioSize, configPath , IrPath, streamIn, streamOut, intNum, M5_Path, variables, debug))
 
@@ -277,17 +291,21 @@ class Variable:
 			self.bufferSize = kwargs.get('BufferSize')
 			self.address = kwargs.get('Address')
 			# Convert connection definitions to lowercase
-			self.inCon = inCon.lower()
-			self.outCon = outCon.lower()
+			self.inCon = self.inCon.lower()
+			self.outCon = self.outCon.lower()
+		elif self.type == 'Cache':
+			self.name = kwargs.get('Name')
+			self.accName = kwargs.get('AccName')
+			self.size = kwargs.get('Size')
 		else:
-			print(self.type)
 			# Throw an exception if we don't know the type
-			exceptionString = "The Variable: " + kwargs.get('name')
-			+ " has an invalid type named: " + str(self.type)
-			raise VariableTypeError(exceptionString)
+			exceptionString = ("The variable: " + kwargs.get('Name')
+			+ " has an invalid type named: " + self.type)
+			raise Exception(exceptionString)
 
 	def genConfig(self, lines):
-
+		# Add new variable configs here
+		# Stream Buffer Variable
 		if self.type == 'Stream':
 			lines.append("# " + self.name + " (Stream Variable)")
 			lines.append("addr = " + hex(self.address))
@@ -296,6 +314,7 @@ class Variable:
 			lines.append("clstr." + self.inCon + ".stream = " + "clstr." + self.name.lower() + ".stream_in")
 			lines.append("clstr." + self.outCon + ".stream = " + "clstr." + self.name.lower() + ".stream_out")
 			lines.append("")
+		# Scratchpad Memory
 		elif self.type == 'SPM':
 			lines.append("# " + self.name + " (Variable)")
 			lines.append("addr = " + hex(self.address))
@@ -307,5 +326,15 @@ class Variable:
 			lines.append("clstr." + self.name.lower() + "." + "ready_mode = " + str(self.readyMode))
 			lines.append("clstr." + self.name.lower() + "." + "port" + " = " + "clstr.local_bus.master")
 			lines.append("for i in range(" + str(self.ports) + "):")
-
+		# L1 Cache, need to add L2 still...
+		elif self.type == 'Cache':
+			lines.append("# " + self.name + " (Cache)")
+			lines.append("clstr." + self.name + " = L1Cache(size = '" + str(self.size) + "B')")
+			lines.append("clstr." + self.name + ".mem_side = clstr.coherency_bus.slave")
+			lines.append("clstr." + self.name + ".cpu_side = clstr." + self.accName + ".local")
+		else:
+			# Should never get here... but just in case throw an exception
+			exceptionString = ("The variable: " + kwargs.get('Name')
+			+ " has an invalid type named: " + self.type)
+			raise Exception(exceptionString)
 		return lines
