@@ -1,1 +1,2 @@
-# gem5-mem-tool
+# SALAM-Configurator
+User guide to come soon...
