@@ -72,8 +72,8 @@ class AccCluster:
 					streamOut.extend((i['StreamOut'].split(',')))
 				if 'LocalSlaves' in i:
 					localConnections.extend((i['LocalSlaves'].split(',')))
-				if 'Interrupt' in i:
-					intNum = i['Interrupt']
+				if 'InterruptNum' in i:
+					intNum = i['InterruptNum']
 				if 'Debug' in i:
 					debug = i['Debug']
 				if 'Var' in i:
